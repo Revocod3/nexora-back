@@ -5,14 +5,25 @@
   "private": true,
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "dev:crm": "pnpm --filter crm dev",
-    "dev:whatsapp": "pnpm --filter whatsapp dev",
-    "build": "pnpm -r build",
+    "dev": "turbo dev",
+    "dev:crm": "turbo dev --filter crm",
+    "dev:whatsapp": "turbo dev --filter whatsapp",
+    "build": "turbo build",
+    "build:crm": "turbo build --filter crm",
+    "build:whatsapp": "turbo build --filter whatsapp",
+    "start": "turbo start",
+    "test": "turbo test",
+    "lint": "turbo lint",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "docker:build": "docker compose build"
   },
   "workspaces": [
-    "services/*"
-  ]
+    "services/*",
+    "shared/*"
+  ],
+  "devDependencies": {
+    "turbo": "^2.6.0"
+  }
 }
