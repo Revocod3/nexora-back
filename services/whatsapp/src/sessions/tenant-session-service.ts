@@ -1,5 +1,4 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { publish } from '@nexora/bus';
 import { EnvelopeSchema } from '@nexora/contracts';
 import { WhatsappConfigService } from '../config/config.js';
 import { useRedisAuthState } from '../auth/redis-auth-state.js';
@@ -55,7 +54,7 @@ export interface TenantSessionService {
 @Injectable()
 export class TenantSessionServiceImpl implements TenantSessionService, OnModuleDestroy {
   public readonly tenantId: string;
-  private readonly log = createLogger({ service: 'connector-whatsapp-tenant-session' });
+  private readonly log = createLogger('connector-whatsapp-tenant-session');
   private sock: WASocket | null = null;
   private lastQr: string | null = null;
   private connection: string = 'disconnected';
@@ -494,7 +493,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
       if (!m.message) continue;
 
       // Always debug message first to capture both inbound and fromMe echoes
-      debugBaileysMessage(this.tenantId, m, m.key?.fromMe ? 'outbound_echo' : 'inbound');
+      debugBaileysMessage(this.tenantId, m as any, m.key?.fromMe ? 'outbound_echo' : 'inbound');
 
       // If this is an echo of a message we sent (fromMe), process it for conversation display
       if (m.key?.fromMe) {
@@ -523,7 +522,8 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
           };
           
           try {
-            await publish('outbound.echoes', echoPayload);
+            // Bus messaging disabled in MVP - using direct HTTP calls instead
+            // await publish('outbound.echoes', echoPayload);
             this.log.info('session.outbound.echo.published', {
               tenantId: this.tenantId,
               recipient: echoJid,
@@ -628,7 +628,14 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
             threadKeyUsed: senderJid.split('@')[0] // Log the actual thread key being used
           });
 
-          await publish('inbound.messages', { ...payload, content: { text } });
+          // Bus messaging disabled in MVP - messages are processed locally
+          // await publish('inbound.messages', { ...payload, content: { text } });
+          this.log.info('session.inbound.message.processed', {
+            tenantId: this.tenantId,
+            traceId: payload.traceId,
+            sender: senderJid,
+            len: text.length
+          });
         } catch (error) {
           this.log.error('session.message.publish.error', {
             tenantId: this.tenantId,

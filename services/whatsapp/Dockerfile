@@ -18,7 +18,7 @@ COPY shared ./shared
 COPY services ./services
 
 # Install all dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Build WhatsApp service
 RUN pnpm --filter whatsapp build

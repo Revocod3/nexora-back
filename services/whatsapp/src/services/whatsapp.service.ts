@@ -6,7 +6,7 @@ import { logJidTransformation } from '../utils/jid-debug.js';
 
 @Injectable()
 export class WhatsappService implements OnModuleInit, OnModuleDestroy {
-  private readonly log = createLogger({ service: 'connector-whatsapp' });
+  private readonly log = createLogger('connector-whatsapp');
   private readonly defaultTenantId: string;
 
   constructor(

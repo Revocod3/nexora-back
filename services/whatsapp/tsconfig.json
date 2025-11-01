@@ -10,25 +10,8 @@
     "emitDecoratorMetadata": true,
     "strict": true,
     "skipLibCheck": true,
-    "baseUrl": "./",
-    "paths": {
-      "@la/shared-config": ["../../../shared/config/src"],
-      "@la/shared-tracing": ["../../../shared/tracing/src"],
-      "@la/logger": ["../../../shared/logger/src"],
-      "@la/contracts": ["../../../packages/contracts/src"],
-      "@la/bus": ["../../../packages/bus/src"]
-    }
+    "baseUrl": "./"
   },
-  "include": [
-    "src/**/*",
-    "services/connectors/whatsapp/src/config/config.ts",
-    "services/connectors/whatsapp/src/controllers/health.controller.ts",
-    "services/connectors/whatsapp/src/controllers/wa.controller.ts",
-    "services/connectors/whatsapp/src/services/whatsapp.service.ts",
-    "services/connectors/whatsapp/src/consumers/outbound.consumer.ts",
-    "services/connectors/whatsapp/src/tests/main.spec.ts",
-    "services/connectors/whatsapp/src/types/types-qrcode-terminal.d.ts",
-    "services/connectors/whatsapp/src/types/types-qrcode.d.ts",
-    "services/connectors/whatsapp/src/types/types.d.ts"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

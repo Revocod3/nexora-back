@@ -7,7 +7,7 @@ import { createLogger } from '@nexora/logger';
 
 @Injectable()
 export class WhatsAppSessionManager implements OnModuleInit, OnModuleDestroy {
-  private readonly log = createLogger({ service: 'connector-whatsapp-session-manager' });
+  private readonly log = createLogger('connector-whatsapp-session-manager');
   private readonly activeSessions = new Map<string, TenantSessionService>();
   private readonly workerId: string;
   private readonly maxSessionsPerWorker: number;

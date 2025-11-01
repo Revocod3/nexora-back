@@ -6,11 +6,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
-    "dev": "tsx watch src/main.ts",
-    "test": "vitest run"
+    "dev": "tsx watch src/main.ts"
   },
   "dependencies": {
-    "@nexora/bus": "workspace:*",
     "@nexora/config": "workspace:*",
     "@nexora/contracts": "workspace:*",
     "@nexora/logger": "workspace:*",
@@ -31,8 +29,6 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.4.0",
-    "tsx": "^4.7.0",
-    "vitest": "^1.5.0",
-    "supertest": "^6.3.4"
+    "tsx": "^4.7.0"
   }
 }

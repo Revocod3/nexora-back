@@ -45,7 +45,7 @@ export async function useRedisAuthState(
   redis: RedisService,
   encryptionKey?: string,
 ): Promise<RedisAuthStateResult> {
-  const log = createLogger({ service: 'connector-whatsapp-redis-auth' });
+  const log = createLogger('connector-whatsapp-redis-auth');
   const encKey = encryptionKey || process.env.WA_ENCRYPTION_KEY || 'default-key-change-in-prod';
   const disableEncryption =
     process.env.NODE_ENV === 'test' || process.env.WA_DISABLE_ENCRYPTION === 'true';

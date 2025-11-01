@@ -1,124 +1,90 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import Redis from 'ioredis';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { createLogger } from '@nexora/logger';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
-export interface RedisConfig {
-  host: string;
-  port: number;
-  password?: string;
-  db: number;
-  keyPrefix: string;
-  connectTimeout: number;
-  maxRetriesPerRequest: number;
-  retryDelayOnFailover: number;
-  enableReadyCheck: boolean;
-  maxRetriesPerRequestRetries: number;
-}
-
+// Simplified storage service using filesystem instead of Redis
+// This is perfect for MVP - no external dependencies needed
 @Injectable()
-export class RedisService implements OnModuleInit, OnModuleDestroy {
-  private readonly log = createLogger({ service: 'connector-whatsapp-redis' });
-  private client: Redis;
-  private readonly config: RedisConfig;
+export class RedisService implements OnModuleInit {
+  private readonly log = createLogger('connector-whatsapp-storage');
+  private readonly storageDir: string;
 
   constructor() {
-    this.config = {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-      db: parseInt(process.env.REDIS_DB || '0'),
-      keyPrefix: process.env.REDIS_PREFIX || 'wa:',
-      connectTimeout: 5000,
-      maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100,
-      enableReadyCheck: true,
-      maxRetriesPerRequestRetries: 3,
-    };
-
-    this.client = new Redis({
-      host: this.config.host,
-      port: this.config.port,
-      password: this.config.password,
-      db: this.config.db,
-      keyPrefix: this.config.keyPrefix,
-      connectTimeout: this.config.connectTimeout,
-      maxRetriesPerRequest: this.config.maxRetriesPerRequest,
-      enableReadyCheck: this.config.enableReadyCheck,
-      lazyConnect: true, // Connect on first command
-    });
+    this.storageDir = path.join(process.cwd(), 'auth_info');
   }
 
   async onModuleInit() {
     try {
-      await this.client.connect();
-      this.log.info('redis.connected', {
-        host: this.config.host,
-        port: this.config.port,
-        db: this.config.db,
-      });
+      await fs.mkdir(this.storageDir, { recursive: true });
+      this.log.info(`Storage initialized at ${this.storageDir}`);
     } catch (error) {
-      this.log.error('redis.connection.failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        host: this.config.host,
-        port: this.config.port,
-      });
+      this.log.error(`Storage initialization failed: ${error}`);
       throw error;
     }
-
-    // Setup event handlers
-    this.client.on('error', (error) => {
-      this.log.error('redis.error', {
-        error: error.message,
-      });
-    });
-
-    this.client.on('connect', () => {
-      this.log.info('redis.connect');
-    });
-
-    this.client.on('ready', () => {
-      this.log.info('redis.ready');
-    });
-
-    this.client.on('close', () => {
-      this.log.warn('redis.close');
-    });
   }
 
-  async onModuleDestroy() {
-    try {
-      await this.client.quit();
-      this.log.info('redis.disconnected');
-    } catch (error) {
-      this.log.error('redis.disconnect.error', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
+  getClient(): any {
+    // Return a Redis-like interface
+    return {
+      get: async (key: string) => {
+        try {
+          const filePath = this.getFilePath(key);
+          const data = await fs.readFile(filePath, 'utf8');
+          return data;
+        } catch (error) {
+          return null;
+        }
+      },
+      set: async (key: string, value: string) => {
+        const filePath = this.getFilePath(key);
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+        await fs.writeFile(filePath, value, 'utf8');
+        return 'OK';
+      },
+      del: async (...keys: string[]) => {
+        let count = 0;
+        for (const key of keys) {
+          try {
+            await fs.unlink(this.getFilePath(key));
+            count++;
+          } catch (error) {
+            // File doesn't exist, that's OK
+          }
+        }
+        return count;
+      },
+      exists: async (...keys: string[]) => {
+        let count = 0;
+        for (const key of keys) {
+          try {
+            await fs.access(this.getFilePath(key));
+            count++;
+          } catch (error) {
+            // File doesn't exist
+          }
+        }
+        return count;
+      },
+    };
   }
 
-  getClient(): Redis {
-    return this.client;
-  }
-
-  getConfig(): RedisConfig {
-    return { ...this.config };
-  }
-
-  // Health check method
   async ping(): Promise<boolean> {
     try {
-      const result = await this.client.ping();
-      return result === 'PONG';
+      await fs.access(this.storageDir);
+      return true;
     } catch (error) {
-      this.log.error('redis.ping.failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
       return false;
     }
   }
 
-  // Utility method to generate prefixed keys
   getKey(...parts: string[]): string {
     return parts.join(':');
+  }
+
+  private getFilePath(key: string): string {
+    // Convert Redis key to safe filesystem path
+    const safeName = key.replace(/:/g, '_');
+    return path.join(this.storageDir, `${safeName}.json`);
   }
 }

@@ -28,7 +28,7 @@ export interface HealthSummary {
 
 @Injectable()
 export class SessionHealthService implements OnModuleInit, OnModuleDestroy {
-  private readonly log = createLogger({ service: 'connector-whatsapp-health' });
+  private readonly log = createLogger('connector-whatsapp-health');
   private readonly healthCheckInterval: number;
   private readonly maxSessionAge: number;
   private healthCheckTimer?: NodeJS.Timeout;

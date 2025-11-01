@@ -10,7 +10,7 @@ export interface LockInfo {
 
 @Injectable()
 export class SessionLockManager {
-  private readonly log = createLogger({ service: 'connector-whatsapp-lock-manager' });
+  private readonly log = createLogger('connector-whatsapp-lock-manager');
   private readonly lockPrefix = 'lock';
   private readonly renewalTimers = new Map<string, NodeJS.Timeout>();
 
@@ -299,34 +299,12 @@ export class SessionLockManager {
    */
   async getAllLocks(): Promise<Record<string, LockInfo>> {
     try {
-      const client = this.redis.getClient();
-      const keyPrefix = this.redis.getConfig().keyPrefix;
-      const lockPattern = `${keyPrefix}${this.lockPrefix}:*`;
-
-      const keys = await client.keys(lockPattern);
-      if (keys.length === 0) {
-        return {};
-      }
-
-      const pipeline = client.pipeline();
-      keys.forEach((key) => {
-        // Remove keyPrefix since pipeline.get will add it again
-        const actualKey = key.replace(keyPrefix, '');
-        pipeline.get(actualKey);
+      // Simplified for MVP - filesystem storage doesn't support distributed locks
+      // Return empty object as distributed locking is disabled
+      this.log.debug('lock.get_all.disabled', {
+        reason: 'filesystem_storage_no_distributed_locks'
       });
-
-      const results = await pipeline.exec();
-      const locks: Record<string, LockInfo> = {};
-
-      results?.forEach((result, index) => {
-        if (result[1]) {
-          const fullKey = keys[index];
-          const tenantId = fullKey.replace(`${keyPrefix}${this.lockPrefix}:`, '');
-          locks[tenantId] = JSON.parse(result[1] as string);
-        }
-      });
-
-      return locks;
+      return {};
     } catch (error) {
       this.log.error('lock.get_all.error', {
         error: error instanceof Error ? error.message : 'Unknown error',

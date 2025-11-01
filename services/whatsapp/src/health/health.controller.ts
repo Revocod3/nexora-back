@@ -4,7 +4,7 @@ import { createLogger } from '@nexora/logger';
 
 @Controller('health')
 export class HealthController {
-  private readonly log = createLogger({ service: 'connector-whatsapp-health-controller' });
+  private readonly log = createLogger('connector-whatsapp-health-controller');
 
   constructor(private readonly healthService: SessionHealthService) {}
 

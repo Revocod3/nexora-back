@@ -4,6 +4,9 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
+# Install git (needed for some npm packages like baileys)
+RUN apk add --no-cache git
+
 # Enable corepack for pnpm
 RUN corepack enable
 
@@ -15,7 +18,7 @@ COPY shared ./shared
 COPY services ./services
 
 # Install all dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Build CRM service
 RUN pnpm --filter crm build

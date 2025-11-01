@@ -1,17 +1,17 @@
-// Simple logger using pino
+// Simplified logger - no objects, just strings
 import pino from 'pino';
 
 export const createLogger = (name: string) => {
   return pino({
     name,
     level: process.env.LOG_LEVEL || 'info',
-    transport: {
+    transport: process.env.NODE_ENV !== 'production' ? {
       target: 'pino-pretty',
       options: {
         colorize: true,
         ignore: 'pid,hostname',
         translateTime: 'SYS:standard',
       },
-    },
+    } : undefined,
   });
 };
