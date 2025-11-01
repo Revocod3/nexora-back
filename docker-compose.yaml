@@ -47,7 +47,7 @@ services:
     ports:
       - "${CRM_PORT:-8000}:8000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: 8000
       # Redis Connection
       REDIS_HOST: redis

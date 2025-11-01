@@ -1,8 +1,13 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service.js';
-import OpenAI from 'openai';
+import { Agent, run, setDefaultOpenAIKey } from '@openai/agents';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { ServicesService } from '../modules/services/services.service';
+import { AppointmentsService } from '../modules/appointments/appointments.service';
+import { ClientsService } from '../modules/clients/clients.service';
+import { createSalonTools } from '../agents/tools/salon.tools';
+import { SALON_AGENT_INSTRUCTIONS } from '../agents/definitions/salon-assistant.agent';
 
 interface InboundMessage {
   traceId: string;
@@ -14,22 +19,51 @@ interface InboundMessage {
   };
 }
 
+interface ConversationHistory {
+  items: any[];
+  lastUpdated: number;
+}
+
 @Injectable()
 export class MessagingService implements OnModuleInit {
   private readonly logger = new Logger(MessagingService.name);
-  private openai: OpenAI;
+  private readonly agent: Agent;
   private readonly whatsappUrl: string;
   private readonly crmApiKey: string;
+  private readonly tools: ReturnType<typeof createSalonTools>;
 
   constructor(
     private readonly redis: RedisService,
     private readonly httpService: HttpService,
+    private readonly servicesService: ServicesService,
+    private readonly appointmentsService: AppointmentsService,
+    private readonly clientsService: ClientsService,
   ) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY is required');
     }
-    this.openai = new OpenAI({ apiKey });
+
+    // Set the global OpenAI API key for the agents SDK
+    setDefaultOpenAIKey(apiKey);
+
+    // Create tools with service dependencies
+    this.tools = createSalonTools(this.servicesService, this.appointmentsService);
+
+    // Create the salon assistant agent
+    this.agent = new Agent({
+      name: 'SalonAssistant',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
+      instructions: SALON_AGENT_INSTRUCTIONS,
+      tools: [
+        this.tools.get_services,
+        this.tools.check_availability,
+        this.tools.create_appointment,
+        this.tools.find_appointments,
+        this.tools.cancel_appointment,
+      ],
+    });
+
     this.whatsappUrl = process.env.WHATSAPP_CALLBACK_URL || 'http://whatsapp:3011/wa/send';
     this.crmApiKey = process.env.CRM_INTERNAL_API_KEY || '';
   }
@@ -53,12 +87,51 @@ export class MessagingService implements OnModuleInit {
     try {
       this.logger.log(`Processing message from ${message.sender}: ${message.content.text}`);
 
-      // Generate AI response
-      const response = await this.generateAIResponse(message.content.text);
+      // Get conversation history from Redis
+      const historyKey = `conversation:${message.sender}`;
+      const redisClient = this.redis.getClient();
+      const savedHistory = await redisClient.get(historyKey);
+      let history: any[] = [];
 
-      this.logger.log(`AI generated response: ${response}`);
+      if (savedHistory) {
+        try {
+          const parsed = JSON.parse(savedHistory);
+          history = parsed.items || [];
+        } catch (e) {
+          this.logger.warn('Failed to parse history, starting fresh');
+        }
+      }
 
-      // Send response back through WhatsApp
+      // Run agent with history
+      const input = history.length > 0
+        ? history.concat({ role: 'user', content: message.content.text })
+        : message.content.text;
+
+      // Get salon name from client config
+      let salonName = 'Salón de Belleza';
+      try {
+        const client = await this.clientsService.findOne(message.tenantId);
+        salonName = client.name || salonName;
+      } catch (e) {
+        this.logger.warn(`Could not fetch client name for ${message.tenantId}`);
+      }
+
+      const result = await run(this.agent, input, {
+        context: {
+          salonName,
+          clientId: message.tenantId,
+          customerPhone: message.sender,
+        },
+      });
+
+      // Save updated history (expire after 1 hour)
+      await redisClient.setEx(
+        historyKey,
+        3600,
+        JSON.stringify({ items: result.history, lastUpdated: Date.now() })
+      );
+
+      const response = result.finalOutput || 'Lo siento, no pude generar una respuesta.';
       await this.sendWhatsAppMessage(message.sender, response);
 
       this.logger.log(`Response sent successfully to ${message.sender}`);
@@ -67,33 +140,14 @@ export class MessagingService implements OnModuleInit {
         `Failed to handle inbound message: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
       );
+
+      await this.sendWhatsAppMessage(
+        message.sender,
+        'Disculpa, tuve un problema técnico. ¿Puedes repetir tu solicitud?',
+      ).catch(err => this.logger.error('Failed to send fallback message', err));
     }
   }
 
-  private async generateAIResponse(userMessage: string): Promise<string> {
-    try {
-      const completion = await this.openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: 'Eres un asistente de ventas amable y profesional. Responde de manera concisa y útil en español.',
-          },
-          {
-            role: 'user',
-            content: userMessage,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
-
-      return completion.choices[0]?.message?.content || 'Lo siento, no pude generar una respuesta.';
-    } catch (error) {
-      this.logger.error(`OpenAI API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return 'Lo siento, estoy experimentando dificultades técnicas. ¿Puedes intentarlo de nuevo?';
-    }
-  }
 
   private async sendWhatsAppMessage(to: string, text: string): Promise<void> {
     try {
