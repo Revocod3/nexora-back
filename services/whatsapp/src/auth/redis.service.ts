@@ -118,11 +118,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     try {
       const stream = `bus:stream:${topic}`;
       const payload = JSON.stringify(message);
-      
+
       await this.client.xAdd(stream, '*', {
         data: payload
       });
-      
+
       this.log.debug('redis.stream.publish.success', { topic, stream, size: payload.length });
     } catch (error) {
       this.log.error('redis.stream.publish.failed', {
@@ -140,11 +140,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (!this.subscriber) {
       throw new Error('Redis subscriber not initialized');
     }
-    
+
     const stream = `bus:stream:${topic}`;
     const group = 'crm-consumer-group';
     const consumer = `crm-${process.pid}`;
-    
+
     try {
       // Create consumer group if it doesn't exist
       try {
@@ -161,7 +161,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
       // Start consuming messages
       this.consumeStream(stream, group, consumer, handler);
-      
+
       this.log.info('redis.stream.subscribe.success', { topic, stream, group, consumer });
     } catch (error) {
       this.log.error('redis.stream.subscribe.failed', {
@@ -203,7 +203,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
                   const data = message.message.data;
                   const parsed = JSON.parse(data as string);
                   await handler(parsed);
-                  
+
                   // Acknowledge the message
                   await this.client!.xAck(stream, group, message.id);
                 } catch (error) {
