@@ -1,5 +1,4 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { EnvelopeSchema } from '../utils/contracts.js';
 import { WhatsappConfigService } from '../config/config.js';
 import { useRedisAuthState } from '../auth/redis-auth-state.js';
 import { SessionLockManager } from '../locks/session-lock-manager.js';
@@ -212,7 +211,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
           messageType: message.text ? 'text' : 'other',
         });
         // Also run JID debug on the send response
-        try { debugBaileysMessage(this.tenantId, sendRes, 'outbound_sent'); } catch { }
+        try { debugBaileysMessage(this.tenantId, 'outbound_sent', sendRes); } catch { }
         return;
       } catch (error) {
         this.log.warn('session.message.send.immediate_failed', {
@@ -531,8 +530,20 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
     for (const m of msgs) {
       if (!m.message) continue;
 
+      // Ignore system messages (status updates, receipts, etc.) that don't have a valid key
+      // These messages have m.message but m.key is undefined
+      if (!m.key || !m.key.id) {
+        this.log.debug?.('session.message.ignored_system_message', {
+          tenantId: this.tenantId,
+          hasKey: !!m.key,
+          hasKeyId: !!(m.key?.id),
+          messageType: typeof m.message
+        });
+        continue;
+      }
+
       // Always debug message first to capture both inbound and fromMe echoes
-      debugBaileysMessage(this.tenantId, m as any, m.key?.fromMe ? 'outbound_echo' : 'inbound');
+      debugBaileysMessage(this.tenantId, m.key?.fromMe ? 'outbound_echo' : 'inbound', m as any);
 
       // If this is an echo of a message we sent (fromMe), process it for conversation display
       if (m.key?.fromMe) {
@@ -635,16 +646,6 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
       const text = m.message.conversation || m.message.extendedTextMessage?.text || '';
       if (text && text.trim().length > 0) {
         const payload = { ...basePayload };
-        const parsed = EnvelopeSchema.safeParse(payload);
-
-        if (!parsed.success) {
-          this.log.warn('session.message.parse.failed', {
-            tenantId: this.tenantId,
-            traceId: payload.traceId,
-            errors: parsed.error.errors,
-          });
-          continue;
-        }
 
         try {
           // Check thread consistency between different JID formats
@@ -961,7 +962,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
             fromMe: k.fromMe || true,
             messageType: msgItem.message.text ? 'text' : 'other'
           });
-          try { debugBaileysMessage(this.tenantId, sendRes, 'outbound_sent'); } catch { }
+          try { debugBaileysMessage(this.tenantId, 'outbound_sent', sendRes); } catch { }
         } else {
           // Connection lost during processing, re-queue the message
           this.pendingMessages.push(msgItem);

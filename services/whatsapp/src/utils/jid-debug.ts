@@ -14,7 +14,7 @@ export function logJidTransformation(
 
 export function debugBaileysMessage(
   tenantId: string,
-  direction: 'inbound' | 'outbound',
+  direction: 'inbound' | 'outbound' | 'outbound_echo' | 'outbound_sent',
   message: any,
   metadata?: any
 ) {
