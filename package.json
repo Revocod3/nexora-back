@@ -14,6 +14,7 @@
     "start": "turbo start",
     "test": "turbo test",
     "lint": "turbo lint",
+    "verify": "./scripts/verify-deploy.sh",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
