@@ -1,0 +1,139 @@
+###############################################################################
+# Nexora Back - Docker Compose
+# 
+# Services:
+#   - PostgreSQL (database)
+#   - CRM (NestJS backend with AdminJS + Integrated Agent Logic)
+#   - WhatsApp (connector - receives/sends messages)
+#
+# Architecture:
+#   WhatsApp -> CRM (handles agent logic) -> WhatsApp
+###############################################################################
+
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: nexora-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nexora_db}
+      POSTGRES_USER: ${POSTGRES_USER:-nexora_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - nexora-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexora_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  crm:
+    build:
+      context: .
+      dockerfile: services/crm/Dockerfile
+      target: production
+    image: nexora-crm:latest
+    container_name: nexora-crm
+    restart: unless-stopped
+    ports:
+      - "${CRM_PORT:-8000}:8000"
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      # Database
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-nexora_db}
+      DB_USER: ${POSTGRES_USER:-nexora_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      # AdminJS
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@nexora.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_COOKIE_SECRET: ${ADMIN_COOKIE_SECRET}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
+      # API Keys
+      CRM_INTERNAL_API_KEY: ${CRM_INTERNAL_API_KEY}
+      # OpenAI - Integrated Agent Logic
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      # WhatsApp Connector Callback
+      WHATSAPP_CALLBACK_URL: http://whatsapp:3011/api/send
+      # Tenant
+      SINGLE_TENANT_ID: ${SINGLE_TENANT_ID:-tenant-prod}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - nexora-internal
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  whatsapp:
+    build:
+      context: .
+      dockerfile: services/whatsapp/Dockerfile
+      target: production
+    image: nexora-whatsapp:latest
+    container_name: nexora-whatsapp
+    restart: unless-stopped
+    ports:
+      - "${WHATSAPP_PORT:-3011}:3011"
+    environment:
+      NODE_ENV: production
+      PORT: 3011
+      # CRM Connection
+      CRM_BASE_URL: http://crm:8000
+      CRM_WEBHOOK_PATH: /api/webhooks/whatsapp/inbound
+      CRM_INTERNAL_API_KEY: ${CRM_INTERNAL_API_KEY}
+      # WhatsApp Config
+      WA_PRINT_QR: ${WA_PRINT_QR:-1}
+      WA_FORCE_RELOGIN: ${WA_FORCE_RELOGIN:-0}
+      # Tenant
+      SINGLE_TENANT_ID: ${SINGLE_TENANT_ID:-tenant-prod}
+    depends_on:
+      crm:
+        condition: service_healthy
+    networks:
+      - nexora-internal
+    volumes:
+      - whatsapp-auth:/app/auth_info
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3011/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres-data:
+    name: nexora-postgres-data
+  whatsapp-auth:
+    name: nexora-whatsapp-auth
+
+networks:
+  nexora-internal:
+    name: nexora-internal
+    driver: bridge

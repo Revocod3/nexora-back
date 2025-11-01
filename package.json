@@ -1,0 +1,18 @@
+{
+  "name": "nexora-back",
+  "version": "1.0.0",
+  "description": "Real estate lead management with WhatsApp & AI",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev:crm": "pnpm --filter crm dev",
+    "dev:whatsapp": "pnpm --filter whatsapp dev",
+    "build": "pnpm -r build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "workspaces": [
+    "services/*"
+  ]
+}

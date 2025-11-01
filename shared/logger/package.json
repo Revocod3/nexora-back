@@ -1,0 +1,9 @@
+{
+  "name": "@nexora/logger",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "pino": "^8.16.0",
+    "pino-pretty": "^10.2.0"
+  }
+}

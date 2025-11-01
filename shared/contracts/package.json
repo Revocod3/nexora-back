@@ -1,0 +1,8 @@
+{
+  "name": "@nexora/contracts",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "zod": "^3.22.0"
+  }
+}
