@@ -5,6 +5,7 @@ import { LeadsModule } from './modules/leads/leads.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { AdminJsModule } from './admin/admin.module';
 import { DatabaseModule } from './database/database.module';
+import { HealthController } from './health.controller';
 import { Client, Lead, Contact, Conversation, Message, Consent } from './entities';
 
 @Module({
@@ -18,7 +19,7 @@ import { Client, Lead, Contact, Conversation, Message, Consent } from './entitie
     ClientsModule,
     AdminJsModule,
   ],
-  controllers: [],
+  controllers: [HealthController],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }

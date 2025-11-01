@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { createLogger } from '@nexora/logger';
+import { createLogger } from '../utils/logger.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 

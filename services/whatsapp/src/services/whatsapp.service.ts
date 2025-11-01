@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { WhatsappConfigService } from '../config/config.js';
-import { createLogger } from '@nexora/logger';
+import { createLogger } from '../utils/logger.js';
 import { WhatsAppSessionManager } from '../sessions/session-manager.js';
 import { logJidTransformation } from '../utils/jid-debug.js';
 

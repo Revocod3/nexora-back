@@ -2,7 +2,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { WhatsAppSessionManager } from '../sessions/session-manager.js';
 import { SessionLockManager } from '../locks/session-lock-manager.js';
 import { RedisService } from '../auth/redis.service.js';
-import { createLogger } from '@nexora/logger';
+import { createLogger } from '../utils/logger.js';
 
 export interface SessionHealthStatus {
   tenantId: string;

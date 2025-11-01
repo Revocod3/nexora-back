@@ -13,9 +13,8 @@ RUN corepack enable
 # Copy workspace files
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 
-# Copy all packages and services for build
-COPY shared ./shared
-COPY services ./services
+# Copy service code
+COPY services/whatsapp ./services/whatsapp
 
 # Install all dependencies
 RUN pnpm install --no-frozen-lockfile
@@ -36,7 +35,6 @@ RUN corepack enable
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 
 # Copy built artifacts from build stage
-COPY --from=build /app/shared ./shared
 COPY --from=build /app/services/whatsapp ./services/whatsapp
 COPY --from=build /app/node_modules ./node_modules
 

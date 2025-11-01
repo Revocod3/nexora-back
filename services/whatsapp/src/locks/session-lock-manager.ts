@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '../auth/redis.service.js';
-import { createLogger } from '@nexora/logger';
+import { createLogger } from '../utils/logger.js';
 
 export interface LockInfo {
   workerId: string;

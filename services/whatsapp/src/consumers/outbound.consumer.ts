@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { createLogger } from '@nexora/logger';
+import { createLogger } from '../utils/logger.js';
 
 // Simplified consumer - for MVP we use direct HTTP calls instead of message bus
 @Injectable()

@@ -1,5 +1,5 @@
 import { RedisService } from './redis.service.js';
-import { createLogger } from '@nexora/logger';
+import { createLogger } from '../utils/logger.js';
 import crypto from 'node:crypto';
 
 // Baileys types (minimal interface to avoid direct imports)

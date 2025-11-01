@@ -1,9 +1,9 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { EnvelopeSchema } from '@nexora/contracts';
+import { EnvelopeSchema } from '../utils/contracts.js';
 import { WhatsappConfigService } from '../config/config.js';
 import { useRedisAuthState } from '../auth/redis-auth-state.js';
 import { SessionLockManager } from '../locks/session-lock-manager.js';
-import { createLogger } from '@nexora/logger';
+import { createLogger } from '../utils/logger.js';
 import crypto from 'node:crypto';
 import { logJidTransformation, debugBaileysMessage, compareJidsForThreadConsistency } from '../utils/jid-debug.js';
 

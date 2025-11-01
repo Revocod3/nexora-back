@@ -9,18 +9,18 @@ import { Client, Lead, Contact, Conversation, Message, Consent } from '../entiti
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get<string>('POSTGRES_HOST', 'db'),
-        port: configService.get<number>('POSTGRES_PORT', 5432),
-        username: configService.get<string>('POSTGRES_USER', 'realtec_user'),
-        password: configService.get<string>('POSTGRES_PASSWORD', 'realtec_pass'),
-        database: configService.get<string>('POSTGRES_DB', 'realtec_db'),
+        host: configService.get<string>('DB_HOST', 'db'),
+        port: configService.get<number>('DB_PORT', 5432),
+        username: configService.get<string>('DB_USER', 'nexora_user'),
+        password: configService.get<string>('DB_PASSWORD', 'changeme'),
+        database: configService.get<string>('DB_NAME', 'nexora_db'),
         entities: [Client, Lead, Contact, Conversation, Message, Consent],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
         logging: configService.get<string>('NODE_ENV') === 'development',
-        ssl: configService.get<string>('NODE_ENV') === 'production',
+        ssl: false, // SSL disabled for Docker local deployment
       }),
       inject: [ConfigService],
     }),
   ],
 })
-export class DatabaseModule {}
+export class DatabaseModule { }

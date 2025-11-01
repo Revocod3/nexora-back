@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { initTracing } from '@nexora/tracing';
+import { initTracing } from './utils/tracing.js';
 import { AppModule } from './app.module.js';
-import { loadOrchestratorEnv } from '@nexora/config';
+import { loadOrchestratorEnv } from './utils/config.js';
 
 async function bootstrap() {
   const env = loadOrchestratorEnv();

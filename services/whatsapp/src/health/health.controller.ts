@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { SessionHealthService } from './session-health.js';
-import { createLogger } from '@nexora/logger';
+import { createLogger } from '../utils/logger.js';
 
 @Controller('health')
 export class HealthController {

@@ -3,7 +3,7 @@ import { TenantSessionService, TenantSessionServiceImpl } from './tenant-session
 import { SessionLockManager } from '../locks/session-lock-manager.js';
 import { RedisService } from '../auth/redis.service.js';
 import { WhatsappConfigService } from '../config/config.js';
-import { createLogger } from '@nexora/logger';
+import { createLogger } from '../utils/logger.js';
 
 @Injectable()
 export class WhatsAppSessionManager implements OnModuleInit, OnModuleDestroy {
