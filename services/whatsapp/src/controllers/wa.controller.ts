@@ -7,7 +7,7 @@ export class WAController {
   constructor(
     private readonly svc: WhatsappService,
     private readonly cfg: WhatsappConfigService,
-  ) {}
+  ) { }
 
   private assertInternal(key?: string) {
     const env = this.cfg.get();
@@ -20,6 +20,26 @@ export class WAController {
   @Get('qr')
   qr(@Headers('x-internal-key') internalKey?: string) {
     return this.getQrState(internalKey);
+  }
+
+  @Post('pair')
+  async requestPairingCode(
+    @Body() body: { phoneNumber: string },
+    @Headers('x-internal-key') internalKey?: string,
+  ) {
+    this.assertInternal(internalKey);
+    if (!body?.phoneNumber) {
+      throw new HttpException('phoneNumber required', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      const code = await this.svc.requestPairingCode(body.phoneNumber);
+      return { ok: true, code, phoneNumber: body.phoneNumber };
+    } catch (e) {
+      throw new HttpException(
+        { ok: false, error: (e as Error).message },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
   }
 
   private getQrState(internalKey?: string) {
@@ -65,7 +85,7 @@ export class WAController {
         });
         return { status: this.svc.getConnectionState(), ascii };
       }
-    } catch {}
+    } catch { }
     try {
       const qrmod = (await import('qrcode')) as unknown as {
         toString: (data: string, opts: { type: 'terminal'; small?: boolean }) => Promise<string>;

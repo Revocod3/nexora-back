@@ -56,7 +56,10 @@ export class SessionLockManager {
       }
 
       // Try to acquire the lock
-      const result = await client.set(lockKey, lockValue, 'EX', ttlSeconds, 'NX');
+      const result = await client.set(lockKey, lockValue, {
+        EX: ttlSeconds,
+        NX: true,
+      });
 
       const acquired = result === 'OK';
 
@@ -125,7 +128,10 @@ export class SessionLockManager {
       });
 
       // Set the lock with new TTL
-      const result = await client.set(lockKey, newLockValue, 'EX', ttlSeconds, 'XX');
+      const result = await client.set(lockKey, newLockValue, {
+        EX: ttlSeconds,
+        XX: true,
+      });
 
       const renewed = result === 'OK';
 
@@ -177,7 +183,10 @@ export class SessionLockManager {
         return 0
       `;
 
-      const result = await client.eval(luaScript, 1, lockKey, workerId);
+      const result = await client.eval(luaScript, {
+        keys: [lockKey],
+        arguments: [workerId],
+      });
 
       if (result === 1) {
         this.log.info('lock.released', {

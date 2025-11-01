@@ -165,8 +165,8 @@ export async function useRedisAuthState(
       const keysData = disableEncryption ? keysJson : encrypt(keysJson, encKey);
 
       await Promise.all([
-        client.setex(credsKey, 86400 * 30, credsData), // 30 days TTL
-        client.setex(keysKey, 86400 * 30, keysData),
+        client.setEx(credsKey, 86400 * 30, credsData), // 30 days TTL
+        client.setEx(keysKey, 86400 * 30, keysData),
       ]);
 
       log.info('redis.auth.state.saved', {

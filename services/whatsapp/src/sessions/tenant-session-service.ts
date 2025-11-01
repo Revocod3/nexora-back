@@ -49,6 +49,7 @@ export interface TenantSessionService {
   sendMessage(to: string, message: any): Promise<void>;
   disconnect(): Promise<void>;
   reconnect(): Promise<void>;
+  requestPairingCode(phoneNumber: string): Promise<string>;
 }
 
 @Injectable()
@@ -304,6 +305,43 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
   }
 
   /**
+   * Request pairing code for phone number authentication (alternative to QR)
+   */
+  async requestPairingCode(phoneNumber: string): Promise<string> {
+    if (!this.sock) {
+      throw new Error('Socket not initialized. Please wait for session to initialize.');
+    }
+
+    // Check if socket has requestPairingCode method
+    const sock = this.sock as any;
+    if (typeof sock.requestPairingCode !== 'function') {
+      throw new Error('Pairing code method not available. Please update Baileys version.');
+    }
+
+    try {
+      this.log.info('session.pairing_code.requesting', {
+        tenantId: this.tenantId,
+        phoneNumber: phoneNumber.slice(0, 3) + '***', // Privacy
+      });
+
+      const code = await sock.requestPairingCode(phoneNumber);
+
+      this.log.info('session.pairing_code.generated', {
+        tenantId: this.tenantId,
+        codeLength: code ? code.length : 0,
+      });
+
+      return code;
+    } catch (error) {
+      this.log.error('session.pairing_code.error', {
+        tenantId: this.tenantId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Trigger a reconnection with exponential backoff
    */
   private triggerReconnect(): void {
@@ -403,12 +441,13 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
       browser: ['Ubuntu', 'Chrome', '120.0.0'],
       ...(version ? { version } : {}),
       logger: pinoLogger,
+      printQRInTerminal: true, // Print QR in console
       // Stability tuning
       keepAliveIntervalMs: 30_000,
-      connectTimeoutMs: 30_000,
+      connectTimeoutMs: 60_000, // Increased from 30s
       retryRequestDelayMs: 350,
       maxMsgRetryCount: 4,
-      qrTimeout: 45_000,
+      qrTimeout: 120_000, // Increased to 120 seconds (2 minutes) to give more time to scan
       generateHighQualityLinkPreview: true,
       markOnlineOnConnect: false,
       getMessage,
@@ -628,9 +667,13 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
             threadKeyUsed: senderJid.split('@')[0] // Log the actual thread key being used
           });
 
-          // Bus messaging disabled in MVP - messages are processed locally
-          // await publish('inbound.messages', { ...payload, content: { text } });
-          this.log.info('session.inbound.message.processed', {
+          // Publish message to Redis for CRM to process
+          await this.redisService.publish('whatsapp:inbound:messages', {
+            ...payload,
+            content: { text }
+          });
+
+          this.log.info('session.inbound.message.published', {
             tenantId: this.tenantId,
             traceId: payload.traceId,
             sender: senderJid,

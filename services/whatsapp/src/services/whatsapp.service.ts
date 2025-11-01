@@ -61,6 +61,44 @@ export class WhatsappService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Request pairing code for phone number authentication
+   */
+  async requestPairingCode(phoneNumber: string): Promise<string> {
+    return this.requestPairingCodeForTenant(this.defaultTenantId, phoneNumber);
+  }
+
+  /**
+   * Request pairing code for a specific tenant
+   */
+  async requestPairingCodeForTenant(tenantId: string, phoneNumber: string): Promise<string> {
+    const session = this.sessionManager.getSession(tenantId);
+    if (!session) {
+      throw new Error('Session not found. Initialize session first.');
+    }
+
+    // Clean phone number (remove any non-digit characters)
+    const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+    if (!cleanNumber) {
+      throw new Error('Invalid phone number');
+    }
+
+    try {
+      const code = await session.requestPairingCode(cleanNumber);
+      this.log.info('whatsapp.service.pairing_code_requested', {
+        tenantId,
+        phoneNumber: cleanNumber.slice(0, 3) + '***', // Log partially for privacy
+      });
+      return code;
+    } catch (error) {
+      this.log.error('whatsapp.service.pairing_code.error', {
+        tenantId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Send text message for the default tenant (backward compatibility)
    */
   async sendText(jidOrDigits: string, text: string): Promise<any> {

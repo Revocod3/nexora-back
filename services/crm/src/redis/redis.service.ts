@@ -1,10 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { createLogger } from '../utils/logger.js';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { createClient, RedisClientType } from 'redis';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
-  private readonly log = createLogger('connector-whatsapp-redis');
+  private readonly logger = new Logger(RedisService.name);
   private client: RedisClientType | null = null;
   private subscriber: RedisClientType | null = null;
   private readonly redisUrl: string;
@@ -17,47 +16,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     try {
-      this.client = createClient({
-        url: this.redisUrl,
-        socket: {
-          reconnectStrategy: (retries: number) => {
-            if (retries > 10) {
-              this.log.error('redis.connection.max_retries_exceeded');
-              return new Error('Max retries exceeded');
-            }
-            return Math.min(retries * 100, 3000);
-          },
-        },
-      }) as RedisClientType;
+      // Main client
+      this.client = createClient({ url: this.redisUrl }) as RedisClientType;
 
       this.client.on('error', (err: Error) => {
-        this.log.error('redis.client.error', { error: err.message });
-      });
-
-      this.client.on('connect', () => {
-        this.log.info('redis.client.connecting', { url: this.redisUrl });
-      });
-
-      this.client.on('ready', () => {
-        this.log.info('redis.client.ready', { url: this.redisUrl });
-      });
-
-      this.client.on('reconnecting', () => {
-        this.log.warn('redis.client.reconnecting', { url: this.redisUrl });
+        this.logger.error(`Redis client error: ${err.message}`);
       });
 
       await this.client.connect();
-      this.log.info('redis.initialized', { url: this.redisUrl });
+      this.logger.log(`Redis initialized: ${this.redisUrl}`);
 
-      // Create separate subscriber client for pub/sub
+      // Subscriber client for pub/sub
       this.subscriber = createClient({ url: this.redisUrl }) as RedisClientType;
       await this.subscriber.connect();
-      this.log.info('redis.subscriber.initialized');
+      this.logger.log('Redis subscriber initialized');
     } catch (error) {
-      this.log.error('redis.initialization.failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        url: this.redisUrl,
-      });
+      this.logger.error(`Redis initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
   }
@@ -66,21 +40,17 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     if (this.subscriber) {
       try {
         await this.subscriber.quit();
-        this.log.info('redis.subscriber.disconnected');
+        this.logger.log('Redis subscriber disconnected');
       } catch (error) {
-        this.log.error('redis.subscriber.disconnect.failed', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        this.logger.error(`Redis subscriber disconnect failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
     if (this.client) {
       try {
         await this.client.quit();
-        this.log.info('redis.disconnected');
+        this.logger.log('Redis disconnected');
       } catch (error) {
-        this.log.error('redis.disconnect.failed', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        this.logger.error(`Redis disconnect failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
   }
@@ -92,25 +62,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.client;
   }
 
-  async ping(): Promise<boolean> {
-    if (!this.client) {
-      return false;
-    }
-    try {
-      await this.client.ping();
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  getKey(...parts: string[]): string {
-    return parts.join(':');
-  }
-
-  /**
-   * Publish a message to a Redis Stream
-   */
   async publish(topic: string, message: any): Promise<void> {
     if (!this.client) {
       throw new Error('Redis client not initialized');
@@ -123,19 +74,13 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         data: payload
       });
       
-      this.log.debug('redis.stream.publish.success', { topic, stream, size: payload.length });
+      this.logger.debug(`Published to stream ${stream}: ${payload.length} bytes`);
     } catch (error) {
-      this.log.error('redis.stream.publish.failed', {
-        topic,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      this.logger.error(`Publish failed for topic ${topic}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
   }
 
-  /**
-   * Subscribe to a Redis Stream (consumer group pattern)
-   */
   async subscribe(topic: string, handler: (message: any) => void | Promise<void>): Promise<void> {
     if (!this.subscriber) {
       throw new Error('Redis subscriber not initialized');
@@ -151,23 +96,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         await this.client!.xGroupCreate(stream, group, '0', {
           MKSTREAM: true
         });
-        this.log.info('redis.stream.group.created', { stream, group });
+        this.logger.log(`Created consumer group ${group} for stream ${stream}`);
       } catch (error: any) {
         if (!error.message?.includes('BUSYGROUP')) {
           throw error;
         }
-        this.log.debug('redis.stream.group.exists', { stream, group });
+        this.logger.debug(`Consumer group ${group} already exists for stream ${stream}`);
       }
 
       // Start consuming messages
       this.consumeStream(stream, group, consumer, handler);
       
-      this.log.info('redis.stream.subscribe.success', { topic, stream, group, consumer });
+      this.logger.log(`Subscribed to stream ${stream} with group ${group} as ${consumer}`);
     } catch (error) {
-      this.log.error('redis.stream.subscribe.failed', {
-        topic,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      this.logger.error(`Subscribe failed for topic ${topic}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
   }
@@ -207,11 +149,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
                   // Acknowledge the message
                   await this.client!.xAck(stream, group, message.id);
                 } catch (error) {
-                  this.log.error('redis.stream.handler.failed', {
-                    stream,
-                    messageId: message.id,
-                    error: error instanceof Error ? error.message : 'Unknown error',
-                  });
+                  this.logger.error(`Handler failed for message ${message.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
                 }
               }
             }
@@ -219,13 +157,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         }
       } catch (error: any) {
         if (error.message?.includes('NOGROUP')) {
-          this.log.warn('redis.stream.group.missing', { stream, group });
+          this.logger.warn(`Consumer group missing for stream ${stream}`);
           return;
         }
-        this.log.error('redis.stream.consume.error', {
-          stream,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        this.logger.error(`Stream consume error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
 
       // Continue polling

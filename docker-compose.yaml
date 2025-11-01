@@ -49,6 +49,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 8000
+      # Redis Connection
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       # Database
       DB_HOST: db
       DB_PORT: 5432
@@ -66,10 +69,12 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
       # WhatsApp Connector Callback
-      WHATSAPP_CALLBACK_URL: http://whatsapp:3011/api/send
+      WHATSAPP_CALLBACK_URL: http://whatsapp:3011/wa/send
       # Tenant
       SINGLE_TENANT_ID: ${SINGLE_TENANT_ID:-tenant-prod}
     depends_on:
+      redis:
+        condition: service_healthy
       db:
         condition: service_healthy
     networks:
@@ -80,6 +85,26 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexora-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis-data:/data
+    networks:
+      - nexora-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     logging:
       driver: "json-file"
       options:
@@ -99,6 +124,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3011
+      # Redis Connection
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       # CRM Connection
       CRM_BASE_URL: http://crm:8000
       CRM_WEBHOOK_PATH: /api/webhooks/whatsapp/inbound
@@ -106,9 +134,12 @@ services:
       # WhatsApp Config
       WA_PRINT_QR: ${WA_PRINT_QR:-1}
       WA_FORCE_RELOGIN: ${WA_FORCE_RELOGIN:-0}
+      WA_ENCRYPTION_KEY: ${WA_ENCRYPTION_KEY}
       # Tenant
       SINGLE_TENANT_ID: ${SINGLE_TENANT_ID:-tenant-prod}
     depends_on:
+      redis:
+        condition: service_healthy
       crm:
         condition: service_healthy
     networks:
@@ -130,6 +161,8 @@ services:
 volumes:
   postgres-data:
     name: nexora-postgres-data
+  redis-data:
+    name: nexora-redis-data
   whatsapp-auth:
     name: nexora-whatsapp-auth
 

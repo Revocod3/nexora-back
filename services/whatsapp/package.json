@@ -21,6 +21,7 @@
     "qrcode": "^1.5.3",
     "pino": "^8.16.0",
     "pino-pretty": "^10.2.0",
+    "redis": "^4.7.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
