@@ -1,0 +1,100 @@
+╔════════════════════════════════════════════════════════════════╗
+║           NEXORA BACK - COMANDOS RÁPIDOS                       ║
+╚════════════════════════════════════════════════════════════════╝
+
+🔍 VERIFICACIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pnpm verify              Verificar prerequisites antes de deploy
+docker --version         Verificar que Docker esté disponible
+
+
+🚀 DEPLOYMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pnpm docker:build        Construir imágenes Docker
+pnpm docker:up           Levantar todos los servicios
+pnpm docker:down         Detener todos los servicios
+pnpm docker:logs         Ver logs de todos los servicios
+
+
+💻 DESARROLLO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+pnpm install             Instalar dependencias
+pnpm dev                 Ejecutar todos en modo desarrollo
+pnpm dev:crm             Solo CRM en modo desarrollo
+pnpm dev:whatsapp        Solo WhatsApp en modo desarrollo
+pnpm build               Construir todos los servicios
+pnpm test                Ejecutar tests
+
+
+🐳 DOCKER - COMANDOS DETALLADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+docker compose ps                     Ver estado de servicios
+docker compose restart crm            Reiniciar servicio CRM
+docker compose restart whatsapp       Reiniciar servicio WhatsApp
+docker compose down -v                Detener y borrar volúmenes
+docker stats                          Ver uso de recursos
+
+
+📋 LOGS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+docker logs nexora-crm -f             Logs del CRM en tiempo real
+docker logs nexora-whatsapp -f        Logs de WhatsApp (ver QR aquí)
+docker logs nexora-postgres -f        Logs de PostgreSQL
+docker compose logs --tail=100        Últimas 100 líneas de logs
+
+
+🔧 TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+docker compose build --no-cache       Rebuild sin caché
+docker system prune -a                Limpiar Docker (liberar espacio)
+docker volume ls                      Ver volúmenes
+docker volume rm nexora-whatsapp-auth Borrar auth de WhatsApp
+
+
+📱 WHATSAPP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+docker logs nexora-whatsapp -f        Ver QR para escanear
+                                      Escanear con:
+                                      WhatsApp > ⋮ > Dispositivos Vinculados
+
+
+🌐 URLS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+http://localhost:8000/admin           Panel de administración
+http://localhost:8000/api             Documentación API (Swagger)
+http://localhost:8000/health          Health check CRM
+http://localhost:3011/health          Health check WhatsApp
+
+
+📦 GIT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+git status                            Ver cambios
+git add -A                            Agregar todos los cambios
+git commit -m "mensaje"               Hacer commit
+git push origin main                  Subir a GitHub
+
+
+🔐 CREDENCIALES (ver archivo .env)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Admin Panel:
+  Email:    ADMIN_EMAIL
+  Password: ADMIN_PASSWORD
+
+Database:
+  User:     POSTGRES_USER
+  Password: POSTGRES_PASSWORD
+
+
+📚 DOCUMENTACIÓN COMPLETA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cat README.md                         Guía rápida
+cat DEPLOYMENT.md                     Guía completa de deployment
+
+
+💡 TIPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Usa Ctrl+C para detener logs (docker logs -f)
+• Ejecuta pnpm verify antes de deploy
+• Los logs de WhatsApp muestran el QR al inicio
+• Usa --no-cache si el build tiene problemas
+• Los volúmenes persisten datos (auth, DB)
