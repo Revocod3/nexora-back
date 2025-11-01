@@ -125,10 +125,10 @@ export class WhatsappService implements OnModuleInit, OnModuleDestroy {
     try {
       // First release the session
       await this.sessionManager.releaseSession(tenantId);
-      
+
       // Clear the auth state to force fresh QR generation
       await this.sessionManager.clearAuthStateForTenant(tenantId);
-      
+
       this.log.info('whatsapp.service.auth_cleared', {
         tenantId,
         message: 'Auth state cleared - fresh QR will be generated on next connection'

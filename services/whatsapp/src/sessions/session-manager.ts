@@ -221,11 +221,11 @@ export class WhatsAppSessionManager implements OnModuleInit, OnModuleDestroy {
   async clearAuthStateForTenant(tenantId: string): Promise<void> {
     try {
       const { useRedisAuthState } = await import('../auth/redis-auth-state.js');
-      
+
       // Create a temporary auth state instance just to clear it
       const { clearAuthState } = await useRedisAuthState(tenantId, this.redisService);
       await clearAuthState();
-      
+
       this.log.info('session_manager.auth_state.cleared', {
         tenantId,
         workerId: this.workerId

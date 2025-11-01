@@ -73,7 +73,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
   private messageQueueTimeout = parseInt(process.env.WA_MESSAGE_QUEUE_TIMEOUT_MS || '60000');
   private lastSuccessfulConnection = 0;
   private pendingMessages: Array<{ to: string; message: any; resolve: Function; reject: Function }> = [];
-  
+
   // Track original JID for each message to prevent thread mixing during status updates
   private messageJidMapping = new Map<string, { originalJid: string; timestamp: number }>();
 
@@ -185,14 +185,14 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
         // Log the returned message key from Baileys to see exact remoteJid used
         const k = sendRes?.key || {};
         const messageId = k.id;
-        
+
         // Track the original target JID for this message to prevent thread mixing
         if (messageId) {
           this.messageJidMapping.set(messageId, {
             originalJid: target,
             timestamp: Date.now()
           });
-          
+
           // Clean up old mappings (older than 5 minutes)
           const cutoff = Date.now() - 300000;
           for (const [id, mapping] of this.messageJidMapping.entries()) {
@@ -201,7 +201,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
             }
           }
         }
-        
+
         this.log.info('session.message.sent', {
           tenantId: this.tenantId,
           to: target,
@@ -211,7 +211,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
           messageType: message.text ? 'text' : 'other',
         });
         // Also run JID debug on the send response
-        try { debugBaileysMessage(this.tenantId, sendRes, 'outbound_sent'); } catch {}
+        try { debugBaileysMessage(this.tenantId, sendRes, 'outbound_sent'); } catch { }
         return;
       } catch (error) {
         this.log.warn('session.message.send.immediate_failed', {
@@ -444,12 +444,12 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
           const status = u.update?.status ?? u.status;
           const messageId = key.id;
           const updateRemoteJid = key.remoteJid;
-          
+
           // Check if this message has a tracked original JID
           const originalMapping = messageId ? this.messageJidMapping.get(messageId) : null;
-          const threadMixingDetected = originalMapping && 
+          const threadMixingDetected = originalMapping &&
             originalMapping.originalJid !== updateRemoteJid;
-          
+
           this.log.info('session.message.update', {
             tenantId: this.tenantId,
             messageId: messageId || null,
@@ -460,7 +460,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
             threadMixingDetected: threadMixingDetected || false,
             status,
           });
-          
+
           // Log potential thread mixing
           if (threadMixingDetected) {
             this.log.warn('session.message.update.thread_mixing_detected', {
@@ -502,11 +502,11 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
           remoteJid: m.key?.remoteJid || 'unknown',
           messageId: m.key?.id || null
         });
-        
+
         // Process outbound echoes to show our sent messages in conversations
         const echoJid = m.key?.remoteJid || 'unknown';
         const text = m.message?.conversation || m.message?.extendedTextMessage?.text || '';
-        
+
         if (text && text.trim().length > 0) {
           const echoPayload = {
             channel: 'whatsapp',
@@ -520,7 +520,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
             content: { text },
             messageType: 'outbound_echo'
           };
-          
+
           try {
             // Bus messaging disabled in MVP - using direct HTTP calls instead
             // await publish('outbound.echoes', echoPayload);
@@ -560,10 +560,10 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
         // Preserve @lid JIDs exactly as received
         senderJid = rawSender;
         logJidTransformation(
-          this.tenantId, 
-          'inbound_processing', 
-          rawSender, 
-          senderJid, 
+          this.tenantId,
+          'inbound_processing',
+          rawSender,
+          senderJid,
           'lid_jid_preserved',
           { pnAlt, providerEventId }
         );
@@ -572,10 +572,10 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
         senderJid = pnAlt || rawSender;
         if (pnAlt && pnAlt !== rawSender) {
           logJidTransformation(
-            this.tenantId, 
-            'inbound_processing', 
-            rawSender, 
-            senderJid, 
+            this.tenantId,
+            'inbound_processing',
+            rawSender,
+            senderJid,
             'preferred_pn_format',
             { rawSender, pnAlt, providerEventId }
           );
@@ -617,7 +617,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
               'inbound_alternative_formats'
             );
           }
-          
+
           this.log.info('session.inbound.text', {
             tenantId: this.tenantId,
             traceId: payload.traceId,
@@ -901,7 +901,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
 
           const k = sendRes?.key || {};
           const messageId = k.id;
-          
+
           // Track the original target JID for pending messages too
           if (messageId) {
             this.messageJidMapping.set(messageId, {
@@ -909,7 +909,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
               timestamp: Date.now()
             });
           }
-          
+
           this.log.info('session.pending_message.sent', {
             tenantId: this.tenantId,
             to: msgItem.to,
@@ -918,7 +918,7 @@ export class TenantSessionServiceImpl implements TenantSessionService, OnModuleD
             fromMe: k.fromMe || true,
             messageType: msgItem.message.text ? 'text' : 'other'
           });
-          try { debugBaileysMessage(this.tenantId, sendRes, 'outbound_sent'); } catch {}
+          try { debugBaileysMessage(this.tenantId, sendRes, 'outbound_sent'); } catch { }
         } else {
           // Connection lost during processing, re-queue the message
           this.pendingMessages.push(msgItem);

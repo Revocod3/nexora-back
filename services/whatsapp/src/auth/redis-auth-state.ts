@@ -203,7 +203,7 @@ export async function useRedisAuthState(
                 if (proto?.Message?.AppStateSyncKeyData && !('toJSON' in (value || {}))) {
                   value = proto.Message.AppStateSyncKeyData.create(value);
                 }
-              } catch {}
+              } catch { }
             }
             out[id] = value;
           }
@@ -250,7 +250,7 @@ export async function useRedisAuthState(
         client.del(credsKey),
         client.del(keysKey)
       ]);
-      
+
       log.info('redis.auth.state.cleared', {
         tenantId,
         reason: 'logout_or_session_invalid'
