@@ -16,12 +16,12 @@ const CheckAvailabilitySchema = z.object({
 
 const CreateAppointmentSchema = z.object({
   tenantId: z.string().uuid().describe('The tenant ID'),
-  userId: z.string().uuid().optional().describe('The user ID if customer is known'),
   serviceId: z.string().uuid().describe('The service ID for the appointment'),
   scheduledAt: z.string().describe('Scheduled date and time in ISO format'),
-  customerName: z.string().optional().describe('Customer name if not linked to user'),
-  customerPhone: z.string().optional().describe('Customer phone if not linked to user'),
-  notes: z.string().optional().describe('Additional notes for the appointment'),
+  userId: z.union([z.string().uuid(), z.literal('')]).describe('The user ID if customer is known, empty string if not'),
+  customerName: z.string().describe('Customer name if not linked to user'),
+  customerPhone: z.string().describe('Customer phone if not linked to user'),
+  notes: z.string().describe('Additional notes for the appointment'),
 });
 
 const FindAppointmentsSchema = z.object({
@@ -31,7 +31,7 @@ const FindAppointmentsSchema = z.object({
 
 const CancelAppointmentSchema = z.object({
   appointmentId: z.string().uuid().describe('The appointment ID to cancel'),
-  reason: z.string().optional().describe('Cancellation reason'),
+  reason: z.string().describe('Cancellation reason (empty if not provided)'),
 });
 
 // Tool definitions
@@ -102,12 +102,12 @@ export function createSalonTools(
       execute: async (params: z.infer<typeof CreateAppointmentSchema>) => {
         try {
           const appointment = await appointmentsService.create(params.tenantId, {
-            userId: params.userId,
+            userId: params.userId || undefined,
             serviceId: params.serviceId,
             scheduledAt: new Date(params.scheduledAt),
-            customerName: params.customerName,
-            customerPhone: params.customerPhone,
-            notes: params.notes,
+            customerName: params.customerName || undefined,
+            customerPhone: params.customerPhone || undefined,
+            notes: params.notes || undefined,
           });
 
           return {
@@ -167,7 +167,7 @@ export function createSalonTools(
       parameters: CancelAppointmentSchema,
       execute: async ({ appointmentId, reason }: z.infer<typeof CancelAppointmentSchema>) => {
         try {
-          const appointment = await appointmentsService.cancel(appointmentId, reason);
+          const appointment = await appointmentsService.cancel(appointmentId, reason || undefined);
 
           return {
             success: true,
