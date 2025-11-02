@@ -16,6 +16,10 @@ export class WhatsappService implements OnModuleInit, OnModuleDestroy {
     this.defaultTenantId = process.env.WA_DEFAULT_TENANT_ID || 'default';
   }
 
+  getDefaultTenantId(): string {
+    return this.defaultTenantId;
+  }
+
   async onModuleInit() {
     if (process.env.NODE_ENV === 'test' || process.env.WA_DISABLE === '1') return;
 
@@ -45,26 +49,29 @@ export class WhatsappService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Get connection state for the default tenant (backward compatibility)
+   * Get connection state for a tenant (defaults to defaultTenantId)
    */
-  getConnectionState(): string {
-    const session = this.sessionManager.getSession(this.defaultTenantId);
+  getConnectionState(tenantId?: string): string {
+    const tid = tenantId || this.defaultTenantId;
+    const session = this.sessionManager.getSession(tid);
     return session ? session.getConnectionState() : 'disconnected';
   }
 
   /**
-   * Get last QR code for the default tenant (backward compatibility)
+   * Get last QR code for a tenant (defaults to defaultTenantId)
    */
-  getLastQr(): string | null {
-    const session = this.sessionManager.getSession(this.defaultTenantId);
+  getLastQr(tenantId?: string): string | null {
+    const tid = tenantId || this.defaultTenantId;
+    const session = this.sessionManager.getSession(tid);
     return session ? session.getLastQr() : null;
   }
 
   /**
    * Request pairing code for phone number authentication
    */
-  async requestPairingCode(phoneNumber: string): Promise<string> {
-    return this.requestPairingCodeForTenant(this.defaultTenantId, phoneNumber);
+  async requestPairingCode(phoneNumber: string, tenantId?: string): Promise<string> {
+    const tid = tenantId || this.defaultTenantId;
+    return this.requestPairingCodeForTenant(tid, phoneNumber);
   }
 
   /**
@@ -99,10 +106,11 @@ export class WhatsappService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Send text message for the default tenant (backward compatibility)
+   * Send text message for a tenant (defaults to defaultTenantId)
    */
-  async sendText(jidOrDigits: string, text: string): Promise<any> {
-    return this.sendTextToTenant(this.defaultTenantId, jidOrDigits, text);
+  async sendText(jidOrDigits: string, text: string, tenantId?: string): Promise<any> {
+    const tid = tenantId || this.defaultTenantId;
+    return this.sendTextToTenant(tid, jidOrDigits, text);
   }
 
   /**
@@ -152,8 +160,9 @@ export class WhatsappService implements OnModuleInit, OnModuleDestroy {
   /**
    * Reset auth for the default tenant (backward compatibility)
    */
-  async resetAuthDir(): Promise<any> {
-    return this.resetAuthForTenant(this.defaultTenantId);
+  async resetAuthDir(tenantId?: string): Promise<any> {
+    const tid = tenantId || this.defaultTenantId;
+    return this.resetAuthForTenant(tid);
   }
 
   /**

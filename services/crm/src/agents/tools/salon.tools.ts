@@ -5,27 +5,27 @@ import { AppointmentsService } from '../../modules/appointments/appointments.ser
 
 // Tool schemas using Zod
 const GetServicesSchema = z.object({
-  clientId: z.string().uuid().describe('The client/tenant ID'),
+  tenantId: z.string().uuid().describe('The client/tenant ID'),
 });
 
 const CheckAvailabilitySchema = z.object({
-  clientId: z.string().uuid().describe('The client/tenant ID'),
+  tenantId: z.string().uuid().describe('The client/tenant ID'),
   serviceId: z.string().uuid().describe('The service ID to check availability for'),
   date: z.string().describe('The date to check in ISO format (YYYY-MM-DD)'),
 });
 
 const CreateAppointmentSchema = z.object({
-  clientId: z.string().uuid().describe('The client/tenant ID'),
-  leadId: z.string().uuid().optional().describe('The lead ID if customer is known'),
+  tenantId: z.string().uuid().describe('The tenant ID'),
+  userId: z.string().uuid().optional().describe('The user ID if customer is known'),
   serviceId: z.string().uuid().describe('The service ID for the appointment'),
   scheduledAt: z.string().describe('Scheduled date and time in ISO format'),
-  customerName: z.string().optional().describe('Customer name if not linked to lead'),
-  customerPhone: z.string().optional().describe('Customer phone if not linked to lead'),
+  customerName: z.string().optional().describe('Customer name if not linked to user'),
+  customerPhone: z.string().optional().describe('Customer phone if not linked to user'),
   notes: z.string().optional().describe('Additional notes for the appointment'),
 });
 
 const FindAppointmentsSchema = z.object({
-  clientId: z.string().uuid().describe('The client/tenant ID'),
+  tenantId: z.string().uuid().describe('The client/tenant ID'),
   phoneNumber: z.string().describe('Customer phone number in E.164 format'),
 });
 
@@ -44,9 +44,9 @@ export function createSalonTools(
       name: 'get_services',
       description: 'Obtiene la lista de servicios disponibles con precios y duraciones',
       parameters: GetServicesSchema,
-      execute: async ({ clientId }: z.infer<typeof GetServicesSchema>) => {
+      execute: async ({ tenantId }: z.infer<typeof GetServicesSchema>) => {
         try {
-          const services = await servicesService.findByClient(clientId);
+          const services = await servicesService.findByClient(tenantId);
           return {
             success: true,
             services: services.map(s => ({
@@ -71,10 +71,10 @@ export function createSalonTools(
       name: 'check_availability',
       description: 'Verifica los horarios disponibles para un servicio en una fecha específica',
       parameters: CheckAvailabilitySchema,
-      execute: async ({ clientId, serviceId, date }: z.infer<typeof CheckAvailabilitySchema>) => {
+      execute: async ({ tenantId, serviceId, date }: z.infer<typeof CheckAvailabilitySchema>) => {
         try {
           const targetDate = new Date(date);
-          const slots = await appointmentsService.findAvailableSlots(clientId, serviceId, targetDate);
+          const slots = await appointmentsService.findAvailableSlots(tenantId, serviceId, targetDate);
 
           return {
             success: true,
@@ -101,8 +101,8 @@ export function createSalonTools(
       parameters: CreateAppointmentSchema,
       execute: async (params: z.infer<typeof CreateAppointmentSchema>) => {
         try {
-          const appointment = await appointmentsService.create(params.clientId, {
-            leadId: params.leadId,
+          const appointment = await appointmentsService.create(params.tenantId, {
+            userId: params.userId,
             serviceId: params.serviceId,
             scheduledAt: new Date(params.scheduledAt),
             customerName: params.customerName,
@@ -134,9 +134,9 @@ export function createSalonTools(
       name: 'find_appointments',
       description: 'Busca las citas existentes de un cliente por número de teléfono',
       parameters: FindAppointmentsSchema,
-      execute: async ({ clientId, phoneNumber }: z.infer<typeof FindAppointmentsSchema>) => {
+      execute: async ({ tenantId, phoneNumber }: z.infer<typeof FindAppointmentsSchema>) => {
         try {
-          const appointments = await appointmentsService.findByPhone(clientId, phoneNumber);
+          const appointments = await appointmentsService.findByPhone(tenantId, phoneNumber);
 
           return {
             success: true,

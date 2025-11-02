@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Service, Client, ServiceStatus } from '../../entities';
+import { Service, Tenant, ServiceStatus } from '../../entities';
 
 export interface CreateServiceDto {
   name: string;
@@ -16,22 +16,22 @@ export class ServicesService {
   constructor(
     @InjectRepository(Service)
     private servicesRepository: Repository<Service>,
-    @InjectRepository(Client)
-    private clientsRepository: Repository<Client>,
+    @InjectRepository(Tenant)
+    private tenantsRepository: Repository<Tenant>,
   ) {}
 
-  async create(clientId: string, dto: CreateServiceDto): Promise<Service> {
-    const client = await this.clientsRepository.findOne({
-      where: { id: clientId },
+  async create(tenantId: string, dto: CreateServiceDto): Promise<Service> {
+    const tenant = await this.tenantsRepository.findOne({
+      where: { id: tenantId },
     });
 
-    if (!client) {
-      throw new NotFoundException(`Client with ID ${clientId} not found`);
+    if (!tenant) {
+      throw new NotFoundException(`Tenant with ID ${tenantId} not found`);
     }
 
     const service = this.servicesRepository.create({
       ...dto,
-      client,
+      tenant,
       currency: dto.currency || 'EUR',
       status: ServiceStatus.ACTIVE,
     });
@@ -39,10 +39,10 @@ export class ServicesService {
     return this.servicesRepository.save(service);
   }
 
-  async findByClient(clientId: string): Promise<Service[]> {
+  async findByClient(tenantId: string): Promise<Service[]> {
     return this.servicesRepository.find({
       where: {
-        client: { id: clientId },
+        tenant: { id: tenantId },
         status: ServiceStatus.ACTIVE,
       },
       order: {
@@ -54,7 +54,7 @@ export class ServicesService {
   async findOne(id: string): Promise<Service> {
     const service = await this.servicesRepository.findOne({
       where: { id },
-      relations: ['client'],
+      relations: ['tenant'],
     });
 
     if (!service) {

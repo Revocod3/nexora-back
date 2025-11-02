@@ -5,7 +5,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { ServicesService } from '../modules/services/services.service';
 import { AppointmentsService } from '../modules/appointments/appointments.service';
-import { ClientsService } from '../modules/clients/clients.service';
+import { TenantsService } from '../modules/tenants/tenants.service';
 import { createSalonTools } from '../agents/tools/salon.tools';
 import { SALON_AGENT_INSTRUCTIONS } from '../agents/definitions/salon-assistant.agent';
 
@@ -37,7 +37,7 @@ export class MessagingService implements OnModuleInit {
     private readonly httpService: HttpService,
     private readonly servicesService: ServicesService,
     private readonly appointmentsService: AppointmentsService,
-    private readonly clientsService: ClientsService,
+    private readonly tenantsService: TenantsService,
   ) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -107,19 +107,19 @@ export class MessagingService implements OnModuleInit {
         ? history.concat({ role: 'user', content: message.content.text })
         : message.content.text;
 
-      // Get salon name from client config
+      // Get salon name from tenant config
       let salonName = 'Salón de Belleza';
       try {
-        const client = await this.clientsService.findOne(message.tenantId);
-        salonName = client.name || salonName;
+        const tenant = await this.tenantsService.findOne(message.tenantId);
+        salonName = tenant.name || salonName;
       } catch (e) {
-        this.logger.warn(`Could not fetch client name for ${message.tenantId}`);
+        this.logger.warn(`Could not fetch tenant name for ${message.tenantId}`);
       }
 
       const result = await run(this.agent, input, {
         context: {
           salonName,
-          clientId: message.tenantId,
+          tenantId: message.tenantId,
           customerPhone: message.sender,
         },
       });

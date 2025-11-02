@@ -137,6 +137,7 @@ services:
       WA_ENCRYPTION_KEY: ${WA_ENCRYPTION_KEY}
       # Tenant
       SINGLE_TENANT_ID: ${SINGLE_TENANT_ID:-tenant-prod}
+      WA_DEFAULT_TENANT_ID: ${WA_DEFAULT_TENANT_ID:-01624ba8-f6ec-4c9a-8e20-27052429f50e}
     depends_on:
       redis:
         condition: service_healthy

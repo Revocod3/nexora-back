@@ -2,16 +2,19 @@ import {
   IsString,
   IsOptional,
   IsEmail,
-  IsPhoneNumber,
   IsEnum,
   IsNumber,
   Min,
   Max,
   IsObject,
 } from 'class-validator';
-import { LeadStatus } from '../entities';
+import { UserStatus } from '../entities';
 
-export class UpsertLeadDto {
+export class UpsertUserDto {
+  @IsOptional()
+  @IsString()
+  tenant_id?: string;
+
   @IsString()
   name!: string;
 
@@ -40,8 +43,8 @@ export class UpsertLeadDto {
   consent_ip?: string;
 
   @IsOptional()
-  @IsEnum(LeadStatus)
-  status?: LeadStatus;
+  @IsEnum(UserStatus)
+  status?: UserStatus;
 
   @IsOptional()
   @IsNumber()

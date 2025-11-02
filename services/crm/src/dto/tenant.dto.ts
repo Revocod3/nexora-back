@@ -1,7 +1,7 @@
 import { IsString, IsEmail, IsOptional, IsEnum, IsObject } from 'class-validator';
-import { ClientStatus } from '../entities';
+import { TenantStatus } from '../entities';
 
-export class CreateClientDto {
+export class CreateTenantDto {
   @IsString()
   name!: string;
 
@@ -17,15 +17,15 @@ export class CreateClientDto {
   whatsapp_number?: string;
 
   @IsOptional()
-  @IsEnum(ClientStatus)
-  status?: ClientStatus;
+  @IsEnum(TenantStatus)
+  status?: TenantStatus;
 
   @IsOptional()
   @IsObject()
   config_json?: Record<string, any>;
 }
 
-export class UpdateClientDto {
+export class UpdateTenantDto {
   @IsOptional()
   @IsString()
   name?: string;
@@ -43,8 +43,8 @@ export class UpdateClientDto {
   whatsapp_number?: string;
 
   @IsOptional()
-  @IsEnum(ClientStatus)
-  status?: ClientStatus;
+  @IsEnum(TenantStatus)
+  status?: TenantStatus;
 
   @IsOptional()
   @IsObject()

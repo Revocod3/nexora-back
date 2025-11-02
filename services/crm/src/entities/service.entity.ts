@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntityWithTimestamps } from './base.entity';
-import { Client } from './client.entity';
+import { Tenant } from './tenant.entity';
 import { Appointment } from './appointment.entity';
 
 export enum ServiceStatus {
@@ -13,9 +13,9 @@ export class Service extends BaseEntityWithTimestamps {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Client)
-  @JoinColumn({ name: 'client_id' })
-  client!: Client;
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant!: Tenant;
 
   @Column({ length: 255 })
   name!: string;

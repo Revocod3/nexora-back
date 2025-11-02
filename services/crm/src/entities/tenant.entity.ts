@@ -1,16 +1,15 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { BaseEntityWithTimestamps } from './base.entity';
-import { Lead } from './lead.entity';
-import { Contact } from './contact.entity';
+import { User } from './user.entity';
 
-export enum ClientStatus {
+export enum TenantStatus {
   ACTIVE = 'active',
   INACTIVE = 'inactive',
   SUSPENDED = 'suspended',
 }
 
-@Entity('clients')
-export class Client extends BaseEntityWithTimestamps {
+@Entity('tenants')
+export class Tenant extends BaseEntityWithTimestamps {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
@@ -31,15 +30,12 @@ export class Client extends BaseEntityWithTimestamps {
 
   @Column({
     type: 'enum',
-    enum: ClientStatus,
-    default: ClientStatus.ACTIVE,
+    enum: TenantStatus,
+    default: TenantStatus.ACTIVE,
   })
-  status!: ClientStatus;
+  status!: TenantStatus;
 
   // Relations
-  @OneToMany(() => Lead, (lead) => lead.client)
-  leads!: Lead[];
-
-  @OneToMany(() => Contact, (contact) => contact.client)
-  contacts!: Contact[];
+  @OneToMany(() => User, (user) => user.tenant)
+  users!: User[];
 }

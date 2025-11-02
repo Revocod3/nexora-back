@@ -1,13 +1,13 @@
 import { DataSource } from 'typeorm';
-import { Service, Client } from '../entities';
+import { Service, Tenant } from '../entities';
 
 export async function seedServices(dataSource: DataSource, clientId: string) {
   const serviceRepo = dataSource.getRepository(Service);
-  const clientRepo = dataSource.getRepository(Client);
+  const clientRepo = dataSource.getRepository(Tenant);
 
-  const client = await clientRepo.findOne({ where: { id: clientId } });
-  if (!client) {
-    throw new Error(`Client ${clientId} not found`);
+  const tenant = await clientRepo.findOne({ where: { id: clientId } });
+  if (!tenant) {
+    throw new Error(`Tenant ${clientId} not found`);
   }
 
   const services = [
@@ -17,7 +17,7 @@ export async function seedServices(dataSource: DataSource, clientId: string) {
       duration_minutes: 45,
       price: 25.00,
       currency: 'EUR',
-      client,
+      tenant,
     },
     {
       name: 'Tinte completo',
@@ -25,7 +25,7 @@ export async function seedServices(dataSource: DataSource, clientId: string) {
       duration_minutes: 120,
       price: 80.00,
       currency: 'EUR',
-      client,
+      tenant,
     },
     {
       name: 'Mechas',
@@ -33,7 +33,7 @@ export async function seedServices(dataSource: DataSource, clientId: string) {
       duration_minutes: 90,
       price: 60.00,
       currency: 'EUR',
-      client,
+      tenant,
     },
     {
       name: 'Manicura',
@@ -41,13 +41,13 @@ export async function seedServices(dataSource: DataSource, clientId: string) {
       duration_minutes: 30,
       price: 15.00,
       currency: 'EUR',
-      client,
+      tenant,
     },
   ];
 
   for (const serviceData of services) {
     const exists = await serviceRepo.findOne({
-      where: { name: serviceData.name, client: { id: clientId } },
+      where: { name: serviceData.name, tenant: { id: clientId } },
     });
 
     if (!exists) {

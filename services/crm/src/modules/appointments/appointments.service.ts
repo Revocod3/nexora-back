@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThanOrEqual } from 'typeorm';
-import { Appointment, Lead, Service, Client, AppointmentStatus } from '../../entities';
+import { Appointment, User, Service, Tenant, AppointmentStatus } from '../../entities';
 
 export interface CreateAppointmentDto {
-  leadId?: string;
+  userId?: string;
   serviceId: string;
   scheduledAt: Date;
   customerName?: string;
@@ -25,19 +25,19 @@ export class AppointmentsService {
     private appointmentsRepository: Repository<Appointment>,
     @InjectRepository(Service)
     private servicesRepository: Repository<Service>,
-    @InjectRepository(Lead)
-    private leadsRepository: Repository<Lead>,
-    @InjectRepository(Client)
-    private clientsRepository: Repository<Client>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+    @InjectRepository(Tenant)
+    private tenantsRepository: Repository<Tenant>,
   ) {}
 
-  async create(clientId: string, dto: CreateAppointmentDto): Promise<Appointment> {
-    const client = await this.clientsRepository.findOne({
-      where: { id: clientId },
+  async create(tenantId: string, dto: CreateAppointmentDto): Promise<Appointment> {
+    const tenant = await this.tenantsRepository.findOne({
+      where: { id: tenantId },
     });
 
-    if (!client) {
-      throw new NotFoundException(`Client with ID ${clientId} not found`);
+    if (!tenant) {
+      throw new NotFoundException(`Tenant with ID ${tenantId} not found`);
     }
 
     const service = await this.servicesRepository.findOne({
@@ -48,20 +48,20 @@ export class AppointmentsService {
       throw new NotFoundException(`Service with ID ${dto.serviceId} not found`);
     }
 
-    let lead: Lead | undefined;
-    if (dto.leadId) {
-      const foundLead = await this.leadsRepository.findOne({
-        where: { id: dto.leadId },
+    let user: User | undefined;
+    if (dto.userId) {
+      const foundLead = await this.usersRepository.findOne({
+        where: { id: dto.userId },
       });
       if (!foundLead) {
-        throw new NotFoundException(`Lead with ID ${dto.leadId} not found`);
+        throw new NotFoundException(`User with ID ${dto.userId} not found`);
       }
-      lead = foundLead;
+      user = foundLead;
     }
 
     // Check availability
     const isAvailable = await this.checkSlotAvailability(
-      clientId,
+      tenantId,
       dto.scheduledAt,
       service.duration_minutes,
     );
@@ -71,12 +71,12 @@ export class AppointmentsService {
     }
 
     const appointment = this.appointmentsRepository.create({
-      client,
-      lead,
+      tenant,
+      user,
       service,
       scheduled_at: dto.scheduledAt,
-      customer_name: dto.customerName || lead?.name,
-      customer_phone: dto.customerPhone || lead?.phone_e164,
+      customer_name: dto.customerName || user?.name,
+      customer_phone: dto.customerPhone || user?.phone_e164,
       notes: dto.notes,
       status: AppointmentStatus.PENDING,
     });
@@ -85,7 +85,7 @@ export class AppointmentsService {
   }
 
   async findAvailableSlots(
-    clientId: string,
+    tenantId: string,
     serviceId: string,
     date: Date,
   ): Promise<AvailableSlot[]> {
@@ -107,7 +107,7 @@ export class AppointmentsService {
     // Get existing appointments for that day
     const existingAppointments = await this.appointmentsRepository.find({
       where: {
-        client: { id: clientId },
+        tenant: { id: tenantId },
         scheduled_at: Between(startOfDay, endOfDay),
         status: AppointmentStatus.PENDING,
       },
@@ -150,7 +150,7 @@ export class AppointmentsService {
   }
 
   private async checkSlotAvailability(
-    clientId: string,
+    tenantId: string,
     scheduledAt: Date,
     durationMinutes: number,
   ): Promise<boolean> {
@@ -160,8 +160,8 @@ export class AppointmentsService {
     const overlappingAppointments = await this.appointmentsRepository
       .createQueryBuilder('appointment')
       .leftJoinAndSelect('appointment.service', 'service')
-      .leftJoinAndSelect('appointment.client', 'client')
-      .where('client.id = :clientId', { clientId })
+      .leftJoinAndSelect('appointment.tenant', 'tenant')
+      .where('tenant.id = :tenantId', { tenantId })
       .andWhere('appointment.status IN (:...statuses)', {
         statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
       })
@@ -175,29 +175,29 @@ export class AppointmentsService {
     return overlappingAppointments === 0;
   }
 
-  async findByPhone(clientId: string, phoneNumber: string): Promise<Appointment[]> {
+  async findByPhone(tenantId: string, phoneNumber: string): Promise<Appointment[]> {
     return this.appointmentsRepository.find({
       where: {
-        client: { id: clientId },
+        tenant: { id: tenantId },
         customer_phone: phoneNumber,
         status: AppointmentStatus.PENDING,
       },
-      relations: ['service', 'lead'],
+      relations: ['service', 'user'],
       order: {
         scheduled_at: 'ASC',
       },
     });
   }
 
-  async findUpcoming(clientId: string): Promise<Appointment[]> {
+  async findUpcoming(tenantId: string): Promise<Appointment[]> {
     const now = new Date();
     return this.appointmentsRepository.find({
       where: {
-        client: { id: clientId },
+        tenant: { id: tenantId },
         scheduled_at: MoreThanOrEqual(now),
         status: AppointmentStatus.PENDING,
       },
-      relations: ['service', 'lead'],
+      relations: ['service', 'user'],
       order: {
         scheduled_at: 'ASC',
       },

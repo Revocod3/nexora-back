@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntityWithTimestamps } from './base.entity';
-import { Client } from './client.entity';
-import { Lead } from './lead.entity';
+import { Tenant } from './tenant.entity';
+import { User } from './user.entity';
 import { Service } from './service.entity';
 
 export enum AppointmentStatus {
@@ -17,13 +17,13 @@ export class Appointment extends BaseEntityWithTimestamps {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Client)
-  @JoinColumn({ name: 'client_id' })
-  client!: Client;
+  @ManyToOne(() => Tenant)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant!: Tenant;
 
-  @ManyToOne(() => Lead, { nullable: true })
-  @JoinColumn({ name: 'lead_id' })
-  lead?: Lead;
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'user_id' })
+  user?: User;
 
   @ManyToOne(() => Service)
   @JoinColumn({ name: 'service_id' })

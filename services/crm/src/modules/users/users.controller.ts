@@ -1,41 +1,41 @@
 import { Controller, Post, Body, Headers, Get, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiHeader, ApiBody, ApiResponse } from '@nestjs/swagger';
-import { LeadsService } from './leads.service';
-import { UpsertLeadDto } from '../../dto';
+import { UsersService } from './users.service';
+import { UpsertUserDto } from '../../dto';
 import { ApiKeyGuard } from '../../guards/api-key.guard';
 
 @Controller()
 @UseGuards(ApiKeyGuard)
-export class LeadsController {
-  constructor(private readonly leadsService: LeadsService) {}
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
 
-  @Post('/internal/upsert_lead')
-  @ApiOperation({ summary: 'Upsert Lead - Platform Compatible' })
+  @Post('/internal/upsert_user')
+  @ApiOperation({ summary: 'Upsert User - Platform Compatible' })
   @ApiHeader({ name: 'x-api-key', required: true })
   @ApiHeader({ name: 'idempotency-key', required: true })
-  @ApiBody({ type: UpsertLeadDto })
+  @ApiBody({ type: UpsertUserDto })
   @ApiResponse({
     status: 201,
-    description: 'Lead upserted successfully',
+    description: 'User upserted successfully',
     schema: {
       type: 'object',
       properties: {
-        leadId: { type: 'string' },
+        userId: { type: 'string' },
         created: { type: 'boolean' },
-        lead_id: { type: 'string' },
+        user_id: { type: 'string' },
       },
     },
   })
-  async upsertLead(
-    @Body() dto: UpsertLeadDto,
+  async upsertUser(
+    @Body() dto: UpsertUserDto,
     @Headers('idempotency-key') idempotencyKey: string,
     @Headers('x-api-key') apiKey: string,
   ) {
-    const result = await this.leadsService.upsertLead(dto, idempotencyKey);
+    const result = await this.usersService.upsertUser(dto, idempotencyKey);
     return {
-      leadId: result.id, // ✅ Platform expects this
-      created: result.created, // ✅ Platform expects this
-      lead_id: result.id, // ✅ Backward compatibility
+      userId: result.id,
+      created: result.created,
+      user_id: result.id, // Backward compatibility
     };
   }
 

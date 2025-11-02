@@ -1,9 +1,9 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntityWithTimestamps } from './base.entity';
-import { Client } from './client.entity';
+import { Tenant } from './tenant.entity';
 import { Conversation } from './conversation.entity';
 
-export enum LeadStatus {
+export enum UserStatus {
   NEW = 'new',
   CONTACTED = 'contacted',
   QUALIFIED = 'qualified',
@@ -11,14 +11,14 @@ export enum LeadStatus {
   LOST = 'lost',
 }
 
-@Entity('leads')
-export class Lead extends BaseEntityWithTimestamps {
+@Entity('users')
+export class User extends BaseEntityWithTimestamps {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Client, (client) => client.leads)
-  @JoinColumn({ name: 'client_id' })
-  client!: Client;
+  @ManyToOne(() => Tenant, (tenant) => tenant.users)
+  @JoinColumn({ name: 'tenant_id' })
+  tenant!: Tenant;
 
   @Column({ length: 255 })
   name!: string;
@@ -46,15 +46,15 @@ export class Lead extends BaseEntityWithTimestamps {
 
   @Column({
     type: 'enum',
-    enum: LeadStatus,
-    default: LeadStatus.NEW,
+    enum: UserStatus,
+    default: UserStatus.NEW,
   })
-  status!: LeadStatus;
+  status!: UserStatus;
 
   @Column({ type: 'float', nullable: true })
   qualification_score?: number;
 
   // Relations
-  @OneToMany(() => Conversation, (conv) => conv.lead)
+  @OneToMany(() => Conversation, (conv) => conv.user)
   conversations!: Conversation[];
 }
