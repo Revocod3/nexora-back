@@ -72,6 +72,10 @@ services:
       WHATSAPP_CALLBACK_URL: http://whatsapp:3011/wa/send
       # Tenant
       SINGLE_TENANT_ID: ${SINGLE_TENANT_ID:-tenant-prod}
+      # Frontend
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      # WhatsApp Service URL (internal)
+      WHATSAPP_SERVICE_URL: http://whatsapp:3011/wa
     depends_on:
       redis:
         condition: service_healthy

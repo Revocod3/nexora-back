@@ -6,6 +6,9 @@ import { UsersModule } from './modules/users/users.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { ServicesModule } from './modules/services/services.module';
 import { AppointmentsModule } from './modules/appointments/appointments.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ClientsModule } from './modules/clients/clients.module';
+import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { AdminJsModule } from './admin/admin.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health.controller';
@@ -25,6 +28,9 @@ import { MessagingService } from './messaging/messaging.service.js';
     TenantsModule,
     ServicesModule,
     AppointmentsModule,
+    DashboardModule,
+    ClientsModule,
+    WhatsAppModule,
     AdminJsModule,
   ],
   controllers: [HealthController],
