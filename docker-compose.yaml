@@ -76,6 +76,10 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       # WhatsApp Service URL (internal)
       WHATSAPP_SERVICE_URL: http://whatsapp:3011/wa
+    volumes:
+      # Development: mount source code for hot reload
+      - ./services/crm/src:/app/services/crm/src:ro
+      - ./shared:/app/shared:ro
     depends_on:
       redis:
         condition: service_healthy
