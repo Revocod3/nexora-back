@@ -5,7 +5,7 @@ import { ServicesService } from './services.service';
 @ApiTags('services')
 @Controller('services')
 export class ServicesController {
-  constructor(private readonly servicesService: ServicesService) {}
+  constructor(private readonly servicesService: ServicesService) { }
 
   @Get()
   @ApiOperation({ summary: 'Get all services for a tenant' })
@@ -14,9 +14,9 @@ export class ServicesController {
   async getServices(@Query('tenantId') tenantId?: string) {
     // Use default tenant if not provided
     const tid = tenantId || process.env.SINGLE_TENANT_ID || '00000000-0000-0000-0000-000000000000';
-    
+
     const services = await this.servicesService.findByClient(tid);
-    
+
     // Map to frontend expected format
     return services.map(service => ({
       id: service.id,

@@ -27,7 +27,7 @@ export class WhatsAppController {
 
       // Check if session is active by looking for QR or connected state
       const connected = response.data?.status === 'ok' || false;
-      
+
       return {
         connected,
         number: response.data?.phoneNumber || null,
@@ -120,7 +120,7 @@ export class WhatsAppController {
 
   private getInternalHeaders() {
     const headers: Record<string, string> = {};
-    
+
     // Add internal API key if configured
     const internalKey = process.env.CRM_INTERNAL_API_KEY;
     if (internalKey) {

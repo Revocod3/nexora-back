@@ -14,7 +14,7 @@ export class DashboardController {
     private servicesRepository: Repository<Service>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) {}
+  ) { }
 
   @Get('stats')
   @ApiOperation({ summary: 'Get dashboard statistics' })

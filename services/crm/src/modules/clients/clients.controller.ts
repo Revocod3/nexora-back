@@ -12,7 +12,7 @@ export class ClientsController {
     private usersRepository: Repository<User>,
     @InjectRepository(Appointment)
     private appointmentsRepository: Repository<Appointment>,
-  ) {}
+  ) { }
 
   @Get()
   @ApiOperation({ summary: 'Get all clients' })

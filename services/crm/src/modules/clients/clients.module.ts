@@ -7,4 +7,4 @@ import { User, Appointment, Service, Tenant } from '../../entities';
   imports: [TypeOrmModule.forFeature([User, Appointment, Service, Tenant])],
   controllers: [ClientsController],
 })
-export class ClientsModule {}
+export class ClientsModule { }

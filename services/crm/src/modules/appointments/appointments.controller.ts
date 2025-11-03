@@ -26,7 +26,7 @@ export class AppointmentsController {
     private appointmentsRepository: Repository<Appointment>,
     @InjectRepository(Service)
     private servicesRepository: Repository<Service>,
-  ) {}
+  ) { }
 
   @Get()
   @ApiOperation({ summary: 'Get all appointments' })

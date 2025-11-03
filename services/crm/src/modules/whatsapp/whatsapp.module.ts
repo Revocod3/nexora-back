@@ -6,4 +6,4 @@ import { WhatsAppController } from './whatsapp.controller';
   imports: [HttpModule],
   controllers: [WhatsAppController],
 })
-export class WhatsAppModule {}
+export class WhatsAppModule { }
