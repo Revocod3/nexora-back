@@ -20,24 +20,33 @@ export class WhatsAppController {
   async getStatus() {
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${this.whatsappServiceUrl}/ping`, {
+        this.httpService.get(`${this.whatsappServiceUrl}/qr`, {
           headers: this.getInternalHeaders(),
         }),
       );
 
-      // Check if session is active by looking for QR or connected state
-      const connected = response.data?.status === 'ok' || false;
+      // Check connection status from the WA service
+      // Status values: 'open' (connected), 'connecting', 'close', 'forbidden'
+      const status = response.data?.status || 'close';
+      const connected = status === 'open';
 
       return {
         connected,
         number: response.data?.phoneNumber || null,
+        status, // Include raw status for debugging
       };
     } catch (error: any) {
       console.error('WhatsApp status error:', error.message);
-      return {
-        connected: false,
-        number: null,
-      };
+      // Service is down or unreachable
+      throw new HttpException(
+        {
+          connected: false,
+          number: null,
+          error: 'WhatsApp service unavailable',
+          details: error.message,
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
   }
 
