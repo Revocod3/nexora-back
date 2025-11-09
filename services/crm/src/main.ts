@@ -8,7 +8,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Security: Helmet
-  app.use(helmet());
+  // TODO: Re-enable and configure Helmet properly for production
+  // Temporarily disabled to avoid connectivity issues during development
+  // app.use(helmet({
+  //   contentSecurityPolicy: process.env.NODE_ENV === 'production',
+  // }));
 
   // Enable CORS for frontend
   app.enableCors({

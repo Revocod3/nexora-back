@@ -65,6 +65,9 @@ services:
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
       # API Keys
       CRM_INTERNAL_API_KEY: ${CRM_INTERNAL_API_KEY}
+      # JWT Authentication
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       # OpenAI - Integrated Agent Logic
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}

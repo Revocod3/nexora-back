@@ -14,7 +14,7 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Appointment, Service } from '../../entities';
+import { Appointment, Service, Staff } from '../../entities';
 import { CurrentTenant } from '../auth/decorators/current-tenant.decorator';
 
 @ApiTags('appointments')
@@ -36,7 +36,7 @@ export class AppointmentsController {
 
     const appointments = await this.appointmentsRepository.find({
       where: { tenant: { id: tid } },
-      relations: ['service', 'user'],
+      relations: ['service', 'user', 'staff'],
       order: { scheduled_at: 'DESC' },
     });
 
@@ -51,6 +51,9 @@ export class AppointmentsController {
       duration: apt.service?.duration_minutes || 0,
       price: apt.service ? Number(apt.service.price) : 0,
       notes: apt.notes || '',
+      staffId: apt.staff?.id || null,
+      staffName: apt.staff?.name || null,
+      staffRole: apt.staff?.role || null,
     }));
   }
 
@@ -68,19 +71,29 @@ export class AppointmentsController {
       userId: dto.userId,
     });
 
-    // Return in frontend format
-    const service = await this.servicesRepository.findOne({ where: { id: dto.serviceId } });
+    // Fetch full appointment with relations
+    const fullAppointment = await this.appointmentsRepository.findOne({
+      where: { id: appointment.id },
+      relations: ['service', 'staff'],
+    });
+
+    if (!fullAppointment) {
+      throw new NotFoundException('Appointment not found after creation');
+    }
 
     return {
-      id: appointment.id,
-      clientName: appointment.customer_name || '',
-      clientPhone: appointment.customer_phone || '',
-      service: service?.name || 'Unknown',
-      datetime: appointment.scheduled_at.toISOString(),
-      status: appointment.status,
-      duration: service?.duration_minutes || dto.duration || 0,
-      price: service ? Number(service.price) : dto.price || 0,
-      notes: appointment.notes || '',
+      id: fullAppointment.id,
+      clientName: fullAppointment.customer_name || '',
+      clientPhone: fullAppointment.customer_phone || '',
+      service: fullAppointment.service?.name || 'Unknown',
+      datetime: fullAppointment.scheduled_at.toISOString(),
+      status: fullAppointment.status,
+      duration: fullAppointment.service?.duration_minutes || dto.duration || 0,
+      price: fullAppointment.service ? Number(fullAppointment.service.price) : dto.price || 0,
+      notes: fullAppointment.notes || '',
+      staffId: fullAppointment.staff?.id || null,
+      staffName: fullAppointment.staff?.name || null,
+      staffRole: fullAppointment.staff?.role || null,
     };
   }
 
@@ -95,7 +108,7 @@ export class AppointmentsController {
   ) {
     const appointment = await this.appointmentsRepository.findOne({
       where: { id, tenant: { id: tenantId } },
-      relations: ['service', 'user'],
+      relations: ['service', 'user', 'staff'],
     });
 
     if (!appointment) {
@@ -122,6 +135,23 @@ export class AppointmentsController {
       appointment.cancellation_reason = dto.cancellationReason;
     }
 
+    // Handle staff re-assignment
+    if (dto.staffId !== undefined) {
+      if (dto.staffId) {
+        // Find and assign staff
+        const staff = await this.appointmentsRepository.manager.findOne(Staff, {
+          where: { id: dto.staffId, tenant_id: tenantId, is_active: true },
+        });
+        if (!staff) {
+          throw new NotFoundException(`Staff member with ID ${dto.staffId} not found or inactive`);
+        }
+        appointment.staff = staff;
+      } else {
+        // Unassign staff (set to undefined)
+        appointment.staff = undefined;
+      }
+    }
+
     const updated = await this.appointmentsRepository.save(appointment);
 
     return {
@@ -134,6 +164,9 @@ export class AppointmentsController {
       duration: updated.service?.duration_minutes || 0,
       price: updated.service ? Number(updated.service.price) : 0,
       notes: updated.notes || '',
+      staffId: updated.staff?.id || null,
+      staffName: updated.staff?.name || null,
+      staffRole: updated.staff?.role || null,
     };
   }
 

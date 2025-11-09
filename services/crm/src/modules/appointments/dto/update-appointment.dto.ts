@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsDateString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsDateString, IsOptional, IsEnum, IsUUID } from 'class-validator';
 import { AppointmentStatus } from '../../../entities/appointment.entity';
 
 export class UpdateAppointmentDto {
@@ -32,4 +32,9 @@ export class UpdateAppointmentDto {
   @IsOptional()
   @IsString()
   cancellationReason?: string;
+
+  @ApiProperty({ description: 'Staff member ID (for re-assignment)', required: false })
+  @IsOptional()
+  @IsUUID()
+  staffId?: string;
 }
