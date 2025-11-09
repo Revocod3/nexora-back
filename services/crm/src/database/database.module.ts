@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Tenant, User, Conversation, Message, Service, Appointment } from '../entities';
+import { Tenant, TenantUser, Staff, User, Conversation, Message, Service, Appointment } from '../entities';
 
 @Module({
   imports: [
@@ -14,7 +14,7 @@ import { Tenant, User, Conversation, Message, Service, Appointment } from '../en
         username: configService.get<string>('DB_USER', 'nexora_user'),
         password: configService.get<string>('DB_PASSWORD', 'changeme'),
         database: configService.get<string>('DB_NAME', 'nexora_db'),
-        entities: [Tenant, User, Conversation, Message, Service, Appointment],
+        entities: [Tenant, TenantUser, Staff, User, Conversation, Message, Service, Appointment],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
         logging: configService.get<string>('NODE_ENV') === 'development',
         ssl: false, // SSL disabled for Docker local deployment

@@ -3,6 +3,7 @@ import { BaseEntityWithTimestamps } from './base.entity';
 import { Tenant } from './tenant.entity';
 import { User } from './user.entity';
 import { Service } from './service.entity';
+import { Staff } from './staff.entity';
 
 export enum AppointmentStatus {
   PENDING = 'pending',
@@ -28,6 +29,10 @@ export class Appointment extends BaseEntityWithTimestamps {
   @ManyToOne(() => Service)
   @JoinColumn({ name: 'service_id' })
   service!: Service;
+
+  @ManyToOne(() => Staff, { nullable: true })
+  @JoinColumn({ name: 'staff_id' })
+  staff?: Staff;
 
   @Column({ type: 'timestamp' })
   scheduled_at!: Date;

@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { ServicesService } from '../modules/services/services.service';
 import { AppointmentsService } from '../modules/appointments/appointments.service';
 import { TenantsService } from '../modules/tenants/tenants.service';
+import { StaffService } from '../modules/staff/staff.service';
 import { createSalonTools } from '../agents/tools/salon.tools';
 import { SALON_AGENT_INSTRUCTIONS } from '../agents/definitions/salon-assistant.agent';
 
@@ -38,6 +39,7 @@ export class MessagingService implements OnModuleInit {
     private readonly servicesService: ServicesService,
     private readonly appointmentsService: AppointmentsService,
     private readonly tenantsService: TenantsService,
+    private readonly staffService: StaffService,
   ) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -48,7 +50,7 @@ export class MessagingService implements OnModuleInit {
     setDefaultOpenAIKey(apiKey);
 
     // Create tools with service dependencies
-    this.tools = createSalonTools(this.servicesService, this.appointmentsService);
+    this.tools = createSalonTools(this.servicesService, this.appointmentsService, this.staffService);
 
     // Create the salon assistant agent
     this.agent = new Agent({
@@ -56,6 +58,7 @@ export class MessagingService implements OnModuleInit {
       model: process.env.OPENAI_MODEL || 'gpt-4o',
       instructions: SALON_AGENT_INSTRUCTIONS,
       tools: [
+        this.tools.get_staff,
         this.tools.get_services,
         this.tools.check_availability,
         this.tools.create_appointment,

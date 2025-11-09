@@ -2,9 +2,14 @@ import { z } from 'zod';
 import { tool } from '@openai/agents';
 import { ServicesService } from '../../modules/services/services.service';
 import { AppointmentsService } from '../../modules/appointments/appointments.service';
+import { StaffService } from '../../modules/staff/staff.service';
 
 // Tool schemas using Zod
 const GetServicesSchema = z.object({
+  tenantId: z.string().uuid().describe('The client/tenant ID'),
+});
+
+const GetStaffSchema = z.object({
   tenantId: z.string().uuid().describe('The client/tenant ID'),
 });
 
@@ -12,11 +17,13 @@ const CheckAvailabilitySchema = z.object({
   tenantId: z.string().uuid().describe('The client/tenant ID'),
   serviceId: z.string().uuid().describe('The service ID to check availability for'),
   date: z.string().describe('The date to check in ISO format (YYYY-MM-DD)'),
+  staffId: z.string().uuid().optional().describe('Optional staff ID to check specific staff availability'),
 });
 
 const CreateAppointmentSchema = z.object({
   tenantId: z.string().uuid().describe('The tenant ID'),
   serviceId: z.string().uuid().describe('The service ID for the appointment'),
+  staffId: z.string().uuid().optional().describe('Optional staff ID to assign specific staff member'),
   scheduledAt: z.string().describe('Scheduled date and time in ISO format'),
   userId: z.union([z.string().uuid(), z.literal('')]).describe('The user ID if customer is known, empty string if not'),
   customerName: z.string().describe('Customer name if not linked to user'),
@@ -38,8 +45,35 @@ const CancelAppointmentSchema = z.object({
 export function createSalonTools(
   servicesService: ServicesService,
   appointmentsService: AppointmentsService,
+  staffService: StaffService,
 ) {
   return {
+    get_staff: tool({
+      name: 'get_staff',
+      description: 'Obtiene la lista de estilistas/personal disponible con sus especialidades',
+      parameters: GetStaffSchema,
+      execute: async ({ tenantId }: z.infer<typeof GetStaffSchema>) => {
+        try {
+          const staff = await staffService.findAllActive(tenantId);
+          return {
+            success: true,
+            staff: staff.map(s => ({
+              id: s.id,
+              name: s.name,
+              role: s.role,
+              email: s.email,
+              phone: s.phone,
+            })),
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Error fetching staff',
+          };
+        }
+      },
+    }),
+
     get_services: tool({
       name: 'get_services',
       description: 'Obtiene la lista de servicios disponibles con precios y duraciones',
@@ -69,9 +103,9 @@ export function createSalonTools(
 
     check_availability: tool({
       name: 'check_availability',
-      description: 'Verifica los horarios disponibles para un servicio en una fecha específica',
+      description: 'Verifica los horarios disponibles para un servicio en una fecha específica. Si se proporciona staffId, verifica la disponibilidad de ese estilista específico.',
       parameters: CheckAvailabilitySchema,
-      execute: async ({ tenantId, serviceId, date }: z.infer<typeof CheckAvailabilitySchema>) => {
+      execute: async ({ tenantId, serviceId, date, staffId }: z.infer<typeof CheckAvailabilitySchema>) => {
         try {
           const targetDate = new Date(date);
           const slots = await appointmentsService.findAvailableSlots(tenantId, serviceId, targetDate);
@@ -79,6 +113,7 @@ export function createSalonTools(
           return {
             success: true,
             date,
+            staffId: staffId || 'any',
             availableSlots: slots.map(slot => ({
               start: slot.start.toISOString(),
               end: slot.end.toISOString(),
@@ -97,13 +132,14 @@ export function createSalonTools(
 
     create_appointment: tool({
       name: 'create_appointment',
-      description: 'Crea una nueva cita. SOLO usar después de confirmar TODOS los detalles con el cliente',
+      description: 'Crea una nueva cita. SOLO usar después de confirmar TODOS los detalles con el cliente. Si el cliente solicitó un estilista específico, incluir staffId.',
       parameters: CreateAppointmentSchema,
       execute: async (params: z.infer<typeof CreateAppointmentSchema>) => {
         try {
           const appointment = await appointmentsService.create(params.tenantId, {
             userId: params.userId || undefined,
             serviceId: params.serviceId,
+            staffId: params.staffId || undefined,
             scheduledAt: new Date(params.scheduledAt),
             customerName: params.customerName || undefined,
             customerPhone: params.customerPhone || undefined,

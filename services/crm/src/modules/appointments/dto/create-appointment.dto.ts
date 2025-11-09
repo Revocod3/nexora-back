@@ -40,6 +40,11 @@ export class CreateAppointmentDto {
   @IsUUID()
   userId?: string;
 
+  @ApiProperty({ description: 'Staff ID (assigned staff member)', required: false })
+  @IsOptional()
+  @IsUUID()
+  staffId?: string;
+
   @ApiProperty({ description: 'Tenant ID', required: false })
   @IsOptional()
   @IsUUID()

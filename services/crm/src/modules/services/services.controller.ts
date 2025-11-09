@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Patch, Body, Param, Query } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { ServicesService } from './services.service';
 import { CreateServiceDto, UpdateServiceDto } from './dto';
+import { CurrentTenant } from '../auth/decorators/current-tenant.decorator';
 
 @ApiTags('services')
 @Controller('services')
@@ -9,14 +10,10 @@ export class ServicesController {
   constructor(private readonly servicesService: ServicesService) { }
 
   @Get()
-  @ApiOperation({ summary: 'Get all services for a tenant' })
-  @ApiQuery({ name: 'tenantId', required: false, description: 'Tenant ID (uses default if not provided)' })
+  @ApiOperation({ summary: 'Get all services for authenticated tenant' })
   @ApiResponse({ status: 200, description: 'Services list' })
-  async getServices(@Query('tenantId') tenantId?: string) {
-    // Use default tenant if not provided
-    const tid = tenantId || process.env.SINGLE_TENANT_ID || '00000000-0000-0000-0000-000000000000';
-
-    const services = await this.servicesService.findByClient(tid);
+  async getServices(@CurrentTenant() tenantId: string) {
+    const services = await this.servicesService.findByClient(tenantId);
 
     // Map to frontend expected format
     return services.map(service => ({
@@ -34,17 +31,14 @@ export class ServicesController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new service for a tenant' })
-  @ApiQuery({ name: 'tenantId', required: false, description: 'Tenant ID (uses default if not provided)' })
+  @ApiOperation({ summary: 'Create a new service for authenticated tenant' })
   @ApiResponse({ status: 201, description: 'Service created successfully' })
   @ApiResponse({ status: 404, description: 'Tenant not found' })
   async createService(
+    @CurrentTenant() tenantId: string,
     @Body() dto: CreateServiceDto,
-    @Query('tenantId') tenantId?: string,
   ) {
-    const tid = tenantId || process.env.SINGLE_TENANT_ID || '00000000-0000-0000-0000-000000000000';
-
-    const created = await this.servicesService.create(tid, dto);
+    const created = await this.servicesService.create(tenantId, dto);
 
     // Map to frontend expected format
     return {

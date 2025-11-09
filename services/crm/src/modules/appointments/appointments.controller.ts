@@ -6,16 +6,16 @@ import {
   Delete,
   Body,
   Param,
-  Query,
   NotFoundException,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Appointment, Service } from '../../entities';
+import { CurrentTenant } from '../auth/decorators/current-tenant.decorator';
 
 @ApiTags('appointments')
 @Controller('appointments')
@@ -29,11 +29,10 @@ export class AppointmentsController {
   ) { }
 
   @Get()
-  @ApiOperation({ summary: 'Get all appointments' })
-  @ApiQuery({ name: 'tenantId', required: false, description: 'Tenant ID (uses default if not provided)' })
+  @ApiOperation({ summary: 'Get all appointments for authenticated tenant' })
   @ApiResponse({ status: 200, description: 'Appointments list' })
-  async getAppointments(@Query('tenantId') tenantId?: string) {
-    const tid = tenantId || process.env.SINGLE_TENANT_ID || '00000000-0000-0000-0000-000000000000';
+  async getAppointments(@CurrentTenant() tenantId: string) {
+    const tid = tenantId;
 
     const appointments = await this.appointmentsRepository.find({
       where: { tenant: { id: tid } },
@@ -56,13 +55,12 @@ export class AppointmentsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new appointment' })
+  @ApiOperation({ summary: 'Create a new appointment for authenticated tenant' })
   @ApiResponse({ status: 201, description: 'Appointment created successfully' })
-  async createAppointment(@Body() dto: CreateAppointmentDto) {
-    const tid = dto.tenantId || process.env.SINGLE_TENANT_ID || '00000000-0000-0000-0000-000000000000';
-
-    const appointment = await this.appointmentsService.create(tid, {
+  async createAppointment(@CurrentTenant() tenantId: string, @Body() dto: CreateAppointmentDto) {
+    const appointment = await this.appointmentsService.create(tenantId, {
       serviceId: dto.serviceId,
+      staffId: dto.staffId,
       scheduledAt: new Date(dto.datetime),
       customerName: dto.clientName,
       customerPhone: dto.clientPhone,

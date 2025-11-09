@@ -1,8 +1,9 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, Appointment, Service, AppointmentStatus } from '../../entities';
+import { CurrentTenant } from '../auth/decorators/current-tenant.decorator';
 
 @ApiTags('clients')
 @Controller('clients')
@@ -15,11 +16,10 @@ export class ClientsController {
   ) { }
 
   @Get()
-  @ApiOperation({ summary: 'Get all clients' })
-  @ApiQuery({ name: 'tenantId', required: false, description: 'Tenant ID (uses default if not provided)' })
+  @ApiOperation({ summary: 'Get all clients for authenticated tenant' })
   @ApiResponse({ status: 200, description: 'Clients list' })
-  async getClients(@Query('tenantId') tenantId?: string) {
-    const tid = tenantId || process.env.SINGLE_TENANT_ID || '00000000-0000-0000-0000-000000000000';
+  async getClients(@CurrentTenant() tenantId: string) {
+    const tid = tenantId;
 
     // Get all users for this tenant
     const users = await this.usersRepository.find({
@@ -70,11 +70,10 @@ export class ClientsController {
   }
 
   @Get('analytics')
-  @ApiOperation({ summary: 'Get client analytics' })
-  @ApiQuery({ name: 'tenantId', required: false, description: 'Tenant ID (uses default if not provided)' })
+  @ApiOperation({ summary: 'Get client analytics for authenticated tenant' })
   @ApiResponse({ status: 200, description: 'Client analytics' })
-  async getAnalytics(@Query('tenantId') tenantId?: string) {
-    const tid = tenantId || process.env.SINGLE_TENANT_ID || '00000000-0000-0000-0000-000000000000';
+  async getAnalytics(@CurrentTenant() tenantId: string) {
+    const tid = tenantId;
 
     // Total clients (users + unique guest phone numbers)
     const totalUsers = await this.usersRepository.count({

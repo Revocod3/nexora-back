@@ -1,8 +1,9 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual, Between } from 'typeorm';
 import { Appointment, Service, User, AppointmentStatus } from '../../entities';
+import { CurrentTenant } from '../auth/decorators/current-tenant.decorator';
 
 @ApiTags('dashboard')
 @Controller('dashboard')
@@ -17,11 +18,10 @@ export class DashboardController {
   ) { }
 
   @Get('stats')
-  @ApiOperation({ summary: 'Get dashboard statistics' })
-  @ApiQuery({ name: 'tenantId', required: false, description: 'Tenant ID (uses default if not provided)' })
+  @ApiOperation({ summary: 'Get dashboard statistics for authenticated tenant' })
   @ApiResponse({ status: 200, description: 'Dashboard stats' })
-  async getStats(@Query('tenantId') tenantId?: string) {
-    const tid = tenantId || process.env.SINGLE_TENANT_ID || '00000000-0000-0000-0000-000000000000';
+  async getStats(@CurrentTenant() tenantId: string) {
+    const tid = tenantId;
 
     // Appointments today
     const today = new Date();
@@ -106,11 +106,10 @@ export class DashboardController {
   }
 
   @Get('appointments/today')
-  @ApiOperation({ summary: 'Get today\'s appointments' })
-  @ApiQuery({ name: 'tenantId', required: false, description: 'Tenant ID (uses default if not provided)' })
+  @ApiOperation({ summary: 'Get today\'s appointments for authenticated tenant' })
   @ApiResponse({ status: 200, description: 'Today\'s appointments' })
-  async getTodayAppointments(@Query('tenantId') tenantId?: string) {
-    const tid = tenantId || process.env.SINGLE_TENANT_ID || '00000000-0000-0000-0000-000000000000';
+  async getTodayAppointments(@CurrentTenant() tenantId: string) {
+    const tid = tenantId;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);

@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThanOrEqual } from 'typeorm';
-import { Appointment, User, Service, Tenant, AppointmentStatus } from '../../entities';
+import { Appointment, User, Service, Tenant, Staff, AppointmentStatus } from '../../entities';
 
 export interface CreateAppointmentDto {
   userId?: string;
   serviceId: string;
+  staffId?: string;
   scheduledAt: Date;
   customerName?: string;
   customerPhone?: string;
@@ -29,6 +30,8 @@ export class AppointmentsService {
     private usersRepository: Repository<User>,
     @InjectRepository(Tenant)
     private tenantsRepository: Repository<Tenant>,
+    @InjectRepository(Staff)
+    private staffRepository: Repository<Staff>,
   ) {}
 
   async create(tenantId: string, dto: CreateAppointmentDto): Promise<Appointment> {
@@ -59,11 +62,23 @@ export class AppointmentsService {
       user = foundLead;
     }
 
-    // Check availability
+    let staff: Staff | undefined;
+    if (dto.staffId) {
+      const foundStaff = await this.staffRepository.findOne({
+        where: { id: dto.staffId, tenant_id: tenantId },
+      });
+      if (!foundStaff) {
+        throw new NotFoundException(`Staff with ID ${dto.staffId} not found`);
+      }
+      staff = foundStaff;
+    }
+
+    // Check availability (considering staff if provided)
     const isAvailable = await this.checkSlotAvailability(
       tenantId,
       dto.scheduledAt,
       service.duration_minutes,
+      dto.staffId,
     );
 
     if (!isAvailable) {
@@ -74,6 +89,7 @@ export class AppointmentsService {
       tenant,
       user,
       service,
+      staff,
       scheduled_at: dto.scheduledAt,
       customer_name: dto.customerName || user?.name,
       customer_phone: dto.customerPhone || user?.phone_e164,
@@ -153,14 +169,16 @@ export class AppointmentsService {
     tenantId: string,
     scheduledAt: Date,
     durationMinutes: number,
+    staffId?: string,
   ): Promise<boolean> {
     const slotEnd = new Date(scheduledAt);
     slotEnd.setMinutes(slotEnd.getMinutes() + durationMinutes);
 
-    const overlappingAppointments = await this.appointmentsRepository
+    const query = this.appointmentsRepository
       .createQueryBuilder('appointment')
       .leftJoinAndSelect('appointment.service', 'service')
       .leftJoinAndSelect('appointment.tenant', 'tenant')
+      .leftJoinAndSelect('appointment.staff', 'staff')
       .where('tenant.id = :tenantId', { tenantId })
       .andWhere('appointment.status IN (:...statuses)', {
         statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED],
@@ -169,8 +187,14 @@ export class AppointmentsService {
         `(appointment.scheduled_at < :slotEnd AND
           appointment.scheduled_at + (service.duration_minutes || ' minutes')::interval > :scheduledAt)`,
         { scheduledAt, slotEnd },
-      )
-      .getCount();
+      );
+
+    // If staffId is provided, only check that specific staff's availability
+    if (staffId) {
+      query.andWhere('staff.id = :staffId', { staffId });
+    }
+
+    const overlappingAppointments = await query.getCount();
 
     return overlappingAppointments === 0;
   }
