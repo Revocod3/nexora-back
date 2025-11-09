@@ -88,9 +88,13 @@ export class AppointmentsController {
   @ApiOperation({ summary: 'Update an appointment' })
   @ApiParam({ name: 'id', description: 'Appointment ID' })
   @ApiResponse({ status: 200, description: 'Appointment updated successfully' })
-  async updateAppointment(@Param('id') id: string, @Body() dto: UpdateAppointmentDto) {
+  async updateAppointment(
+    @CurrentTenant() tenantId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateAppointmentDto
+  ) {
     const appointment = await this.appointmentsRepository.findOne({
-      where: { id },
+      where: { id, tenant: { id: tenantId } },
       relations: ['service', 'user'],
     });
 
@@ -137,8 +141,13 @@ export class AppointmentsController {
   @ApiOperation({ summary: 'Delete an appointment' })
   @ApiParam({ name: 'id', description: 'Appointment ID' })
   @ApiResponse({ status: 200, description: 'Appointment deleted successfully' })
-  async deleteAppointment(@Param('id') id: string) {
-    const appointment = await this.appointmentsRepository.findOne({ where: { id } });
+  async deleteAppointment(
+    @CurrentTenant() tenantId: string,
+    @Param('id') id: string
+  ) {
+    const appointment = await this.appointmentsRepository.findOne({
+      where: { id, tenant: { id: tenantId } }
+    });
 
     if (!appointment) {
       throw new NotFoundException(`Appointment with ID ${id} not found`);

@@ -60,10 +60,11 @@ export class ServicesController {
   @ApiResponse({ status: 200, description: 'Service updated successfully' })
   @ApiResponse({ status: 404, description: 'Service not found' })
   async updateService(
+    @CurrentTenant() tenantId: string,
     @Param('id') id: string,
     @Body() dto: UpdateServiceDto,
   ) {
-    const updated = await this.servicesService.update(id, dto);
+    const updated = await this.servicesService.update(id, tenantId, dto);
 
     // Map to frontend expected format
     return {
@@ -84,8 +85,11 @@ export class ServicesController {
   @ApiParam({ name: 'id', description: 'Service ID' })
   @ApiResponse({ status: 200, description: 'Service deactivated successfully' })
   @ApiResponse({ status: 404, description: 'Service not found' })
-  async deactivateService(@Param('id') id: string) {
-    const deactivated = await this.servicesService.deactivate(id);
+  async deactivateService(
+    @CurrentTenant() tenantId: string,
+    @Param('id') id: string
+  ) {
+    const deactivated = await this.servicesService.deactivate(id, tenantId);
 
     // Map to frontend expected format
     return {

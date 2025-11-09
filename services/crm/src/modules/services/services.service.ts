@@ -51,9 +51,14 @@ export class ServicesService {
     });
   }
 
-  async findOne(id: string): Promise<Service> {
+  async findOne(id: string, tenantId?: string): Promise<Service> {
+    const whereClause: any = { id };
+    if (tenantId) {
+      whereClause.tenant = { id: tenantId };
+    }
+
     const service = await this.servicesRepository.findOne({
-      where: { id },
+      where: whereClause,
       relations: ['tenant'],
     });
 
@@ -64,14 +69,14 @@ export class ServicesService {
     return service;
   }
 
-  async update(id: string, updates: Partial<CreateServiceDto>): Promise<Service> {
-    const service = await this.findOne(id);
+  async update(id: string, tenantId: string, updates: Partial<CreateServiceDto>): Promise<Service> {
+    const service = await this.findOne(id, tenantId);
     Object.assign(service, updates);
     return this.servicesRepository.save(service);
   }
 
-  async deactivate(id: string): Promise<Service> {
-    const service = await this.findOne(id);
+  async deactivate(id: string, tenantId: string): Promise<Service> {
+    const service = await this.findOne(id, tenantId);
     service.status = ServiceStatus.INACTIVE;
     return this.servicesRepository.save(service);
   }

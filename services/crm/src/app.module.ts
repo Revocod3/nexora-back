@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { UsersModule } from './modules/users/users.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { ServicesModule } from './modules/services/services.module';
@@ -25,6 +26,10 @@ import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // 1 minute
+      limit: 100, // 100 requests per minute
+    }]),
     HttpModule,
     DatabaseModule,
     TypeOrmModule.forFeature([Tenant, TenantUser, Staff, User, Conversation, Message, Service, Appointment]),
@@ -44,6 +49,10 @@ import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
     RedisService,
     MessagingService,

@@ -79,9 +79,28 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    // Find user by email
+    // Build where clause with tenant scoping if subdomain provided
+    const whereClause: any = {
+      email: dto.email,
+      is_active: true
+    };
+
+    // If subdomain provided, scope the login to that specific tenant
+    if (dto.subdomain) {
+      const tenant = await this.tenantRepository.findOne({
+        where: { subdomain: dto.subdomain },
+      });
+
+      if (!tenant) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      whereClause.tenant_id = tenant.id;
+    }
+
+    // Find user by email (and optionally tenant)
     const tenantUser = await this.tenantUserRepository.findOne({
-      where: { email: dto.email, is_active: true },
+      where: whereClause,
       relations: ['tenant'],
     });
 
