@@ -16,6 +16,7 @@ import { VoiceCallsService } from './voice-calls.service';
 import { CreateCallDto, TwilioWebhookDto } from './dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentTenant } from '../auth/decorators/current-tenant.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { CallStatus } from '../../entities';
 import { TwilioService } from './services/twilio.service';
 
@@ -97,6 +98,7 @@ export class VoiceCallsController {
   /**
    * Webhook: Handle incoming call (when call is answered)
    */
+  @Public()
   @Post('webhook/incoming/:callId')
   @ApiOperation({ summary: 'Twilio webhook for incoming call (internal)' })
   async handleIncomingCall(
@@ -121,6 +123,7 @@ export class VoiceCallsController {
   /**
    * Webhook: Handle user speech response
    */
+  @Public()
   @Post('webhook/response/:callId')
   @ApiOperation({ summary: 'Twilio webhook for user response (internal)' })
   async handleResponse(
@@ -164,6 +167,7 @@ export class VoiceCallsController {
   /**
    * Webhook: Handle call status updates
    */
+  @Public()
   @Post('webhook/status/:callId')
   @ApiOperation({ summary: 'Twilio webhook for call status updates (internal)' })
   async handleStatus(
@@ -187,6 +191,7 @@ export class VoiceCallsController {
    * Webhook: Handle recording status (DISABLED - recordings not used to save costs)
    * Transcripts are saved in database instead from Speech-to-Text
    */
+  @Public()
   @Post('webhook/recording/:callId')
   @ApiOperation({ summary: 'Twilio webhook for recording (disabled, not used)' })
   async handleRecording(
@@ -203,6 +208,7 @@ export class VoiceCallsController {
   /**
    * Webhook: Handle answering machine detection
    */
+  @Public()
   @Post('webhook/amd/:callId')
   @ApiOperation({ summary: 'Twilio webhook for answering machine detection (internal)' })
   async handleAMD(
@@ -231,6 +237,7 @@ export class VoiceCallsController {
    * Serve audio files (temporary endpoint for development)
    * In production, use S3 or CDN
    */
+  @Public()
   @Get('audio/:fileName')
   @ApiOperation({ summary: 'Serve audio files (internal)' })
   async serveAudio(
@@ -294,6 +301,7 @@ export class VoiceCallsController {
    * Webhook: Generate TwiML for Media Streams (Realtime API)
    * This webhook is called when a call is answered and sets up the Media Stream
    */
+  @Public()
   @Post('webhook/realtime/incoming/:callId')
   @ApiOperation({
     summary: 'Twilio webhook for realtime call setup (internal)',
