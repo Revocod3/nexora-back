@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Tenant, TenantUser, Staff, User, Conversation, Message, Service, Appointment, Call } from '../entities';
+import { GoogleCalendarCredentials } from '../entities/google-calendar-credentials.entity';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { Tenant, TenantUser, Staff, User, Conversation, Message, Service, Appoin
         username: configService.get<string>('DB_USER', 'nexora_user'),
         password: configService.get<string>('DB_PASSWORD', 'changeme'),
         database: configService.get<string>('DB_NAME', 'nexora_db'),
-        entities: [Tenant, TenantUser, Staff, User, Conversation, Message, Service, Appointment, Call],
+        entities: [Tenant, TenantUser, Staff, User, Conversation, Message, Service, Appointment, Call, GoogleCalendarCredentials],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
         logging: configService.get<string>('NODE_ENV') === 'development',
         ssl: false, // SSL disabled for Docker local deployment

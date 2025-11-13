@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThanOrEqual } from 'typeorm';
 import { Appointment, User, Service, Tenant, Staff, AppointmentStatus } from '../../entities';
+import { GoogleCalendarService } from '../google-calendar/google-calendar.service';
 
 export interface CreateAppointmentDto {
   userId?: string;
@@ -32,6 +33,7 @@ export class AppointmentsService {
     private tenantsRepository: Repository<Tenant>,
     @InjectRepository(Staff)
     private staffRepository: Repository<Staff>,
+    private googleCalendarService: GoogleCalendarService,
   ) {}
 
   async create(tenantId: string, dto: CreateAppointmentDto): Promise<Appointment> {
@@ -97,7 +99,19 @@ export class AppointmentsService {
       status: AppointmentStatus.PENDING,
     });
 
-    return this.appointmentsRepository.save(appointment);
+    const savedAppointment = await this.appointmentsRepository.save(appointment);
+
+    // Sync to Google Calendar if staff is assigned
+    if (savedAppointment.staff_id) {
+      try {
+        await this.googleCalendarService.createCalendarEvent(savedAppointment);
+      } catch (error) {
+        // Log error but don't fail the appointment creation
+        console.error('Failed to sync appointment to Google Calendar:', error);
+      }
+    }
+
+    return savedAppointment;
   }
 
   async findAvailableSlots(
@@ -174,6 +188,7 @@ export class AppointmentsService {
     const slotEnd = new Date(scheduledAt);
     slotEnd.setMinutes(slotEnd.getMinutes() + durationMinutes);
 
+    // Check our database for appointments
     const query = this.appointmentsRepository
       .createQueryBuilder('appointment')
       .leftJoinAndSelect('appointment.service', 'service')
@@ -196,7 +211,27 @@ export class AppointmentsService {
 
     const overlappingAppointments = await query.getCount();
 
-    return overlappingAppointments === 0;
+    if (overlappingAppointments > 0) {
+      return false;
+    }
+
+    // Also check Google Calendar if staff is assigned
+    if (staffId) {
+      try {
+        const isAvailableInGoogleCalendar = await this.googleCalendarService.checkStaffAvailability(
+          staffId,
+          scheduledAt,
+          slotEnd,
+        );
+        return isAvailableInGoogleCalendar;
+      } catch (error) {
+        console.error('Failed to check Google Calendar availability:', error);
+        // On error, only rely on database check
+        return true;
+      }
+    }
+
+    return true;
   }
 
   async findByPhone(tenantId: string, phoneNumber: string): Promise<Appointment[]> {
@@ -231,6 +266,7 @@ export class AppointmentsService {
   async cancel(id: string, reason?: string): Promise<Appointment> {
     const appointment = await this.appointmentsRepository.findOne({
       where: { id },
+      relations: ['service', 'staff', 'tenant'],
     });
 
     if (!appointment) {
@@ -240,12 +276,24 @@ export class AppointmentsService {
     appointment.status = AppointmentStatus.CANCELLED;
     appointment.cancellation_reason = reason;
 
-    return this.appointmentsRepository.save(appointment);
+    const updatedAppointment = await this.appointmentsRepository.save(appointment);
+
+    // Delete from Google Calendar
+    if (updatedAppointment.google_event_id) {
+      try {
+        await this.googleCalendarService.deleteCalendarEvent(updatedAppointment);
+      } catch (error) {
+        console.error('Failed to delete event from Google Calendar:', error);
+      }
+    }
+
+    return updatedAppointment;
   }
 
   async confirm(id: string): Promise<Appointment> {
     const appointment = await this.appointmentsRepository.findOne({
       where: { id },
+      relations: ['service', 'staff', 'tenant'],
     });
 
     if (!appointment) {
@@ -253,7 +301,18 @@ export class AppointmentsService {
     }
 
     appointment.status = AppointmentStatus.CONFIRMED;
-    return this.appointmentsRepository.save(appointment);
+    const confirmedAppointment = await this.appointmentsRepository.save(appointment);
+
+    // Create/update Google Calendar event on confirmation
+    if (confirmedAppointment.staff_id && !confirmedAppointment.google_event_id) {
+      try {
+        await this.googleCalendarService.createCalendarEvent(confirmedAppointment);
+      } catch (error) {
+        console.error('Failed to sync confirmed appointment to Google Calendar:', error);
+      }
+    }
+
+    return confirmedAppointment;
   }
 
   async markNoShow(id: string): Promise<Appointment> {

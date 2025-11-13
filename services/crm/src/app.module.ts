@@ -14,10 +14,12 @@ import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { StaffModule } from './modules/staff/staff.module';
 import { VoiceCallsModule } from './modules/voice-calls/voice-calls.module';
+import { GoogleCalendarModule } from './modules/google-calendar/google-calendar.module';
 import { AdminJsModule } from './admin/admin.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health.controller';
 import { Tenant, TenantUser, Staff, User, Conversation, Message, Service, Appointment, Call } from './entities';
+import { GoogleCalendarCredentials } from './entities/google-calendar-credentials.entity';
 import { RedisService } from './redis/redis.service.js';
 import { MessagingService } from './messaging/messaging.service.js';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
@@ -33,7 +35,7 @@ import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
     }]),
     HttpModule,
     DatabaseModule,
-    TypeOrmModule.forFeature([Tenant, TenantUser, Staff, User, Conversation, Message, Service, Appointment, Call]),
+    TypeOrmModule.forFeature([Tenant, TenantUser, Staff, User, Conversation, Message, Service, Appointment, Call, GoogleCalendarCredentials]),
     AuthModule,
     StaffModule,
     UsersModule,
@@ -44,6 +46,7 @@ import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
     ClientsModule,
     WhatsAppModule,
     VoiceCallsModule,
+    GoogleCalendarModule,
     AdminJsModule,
   ],
   controllers: [HealthController],

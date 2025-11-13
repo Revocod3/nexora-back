@@ -67,4 +67,11 @@ export class Appointment extends BaseEntityWithTimestamps {
 
   @Column({ type: 'timestamp', nullable: true })
   reminder_sent_at?: Date;
+
+  // Google Calendar integration
+  @Column({ nullable: true })
+  google_event_id?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  google_synced_at?: Date;
 }
