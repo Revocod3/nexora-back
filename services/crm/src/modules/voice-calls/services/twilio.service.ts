@@ -72,6 +72,8 @@ export class TwilioService {
     timeout?: number;
     speechTimeout?: string;
   }): string {
+    this.logger.log(`[TWIML-GEN] Generating Gather TwiML, audioUrl: ${params.audioUrl ? 'YES' : 'NO (using TTS)'}`);
+
     const twiml = new twilio.twiml.VoiceResponse();
 
     const gather = twiml.gather({
@@ -79,14 +81,17 @@ export class TwilioService {
       action: params.actionUrl,
       method: 'POST',
       timeout: params.timeout || 5,
-      speechTimeout: params.speechTimeout || 'auto',
+      speechTimeout: '2', // Changed from 'auto' to '2' seconds - 'auto' is not compatible with default model
       language: 'es-ES',
       enhanced: true,
+      speechModel: 'phone_call', // Explicitly set model for better compatibility
     });
 
     if (params.audioUrl) {
+      this.logger.log(`[TWIML-GEN] Using audio Play: ${params.audioUrl}`);
       gather.play(params.audioUrl);
     } else {
+      this.logger.log(`[TWIML-GEN] Using TTS Say for text: "${params.text.substring(0, 50)}..."`);
       gather.say(
         {
           voice: 'Polly.Lucia',
@@ -99,7 +104,10 @@ export class TwilioService {
     // If no input is received, redirect
     twiml.redirect(params.actionUrl);
 
-    return twiml.toString();
+    const twimlString = twiml.toString();
+    this.logger.debug(`[TWIML-GEN] Generated TwiML (${twimlString.length} chars): ${twimlString}`);
+
+    return twimlString;
   }
 
   /**

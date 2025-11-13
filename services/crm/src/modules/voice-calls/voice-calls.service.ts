@@ -41,6 +41,14 @@ export class VoiceCallsService {
   ) {
     this.webhookBaseUrl = this.configService.get<string>('TWILIO_WEBHOOK_BASE_URL', '');
     this.logger.log('VoiceCallsService initialized');
+
+    if (!this.webhookBaseUrl || !this.webhookBaseUrl.startsWith('http')) {
+      this.logger.warn('⚠️  TWILIO_WEBHOOK_BASE_URL is not properly configured. Audio files will not be accessible. Using TTS fallback.');
+      this.logger.warn(`   Current value: "${this.webhookBaseUrl}"`);
+      this.logger.warn('   Expected format: https://your-domain.com (must be publicly accessible with HTTPS)');
+    } else {
+      this.logger.log(`✅ Webhook base URL configured: ${this.webhookBaseUrl}`);
+    }
   }
 
   /**
@@ -160,12 +168,16 @@ export class VoiceCallsService {
       const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}?turn=0&retry=0`;
       this.logger.log(`[CALL-ANSWERED] Action URL: ${actionUrl}`);
 
+      // Don't use audio URL if it's empty or if webhookBaseUrl is not properly configured
+      const useAudioUrl = audioUrl && this.webhookBaseUrl && this.webhookBaseUrl.startsWith('http');
+      this.logger.log(`[CALL-ANSWERED] Using audio URL: ${useAudioUrl}, webhookBaseUrl configured: ${!!this.webhookBaseUrl}`);
+
       const twiml = this.twilioService.generateGatherTwiML({
         text: initialMessage,
-        audioUrl,
+        audioUrl: useAudioUrl ? audioUrl : undefined,
         actionUrl,
         timeout: 5,
-        speechTimeout: 'auto',
+        speechTimeout: '2',
       });
 
       this.logger.log(`[CALL-ANSWERED] TwiML generated successfully, length: ${twiml.length} chars`);
@@ -254,12 +266,16 @@ export class VoiceCallsService {
       const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}?turn=${turnNumber + 1}&retry=0`;
       this.logger.log(`[USER-RESPONSE] Next action URL: ${actionUrl}`);
 
+      // Don't use audio URL if it's empty or if webhookBaseUrl is not properly configured
+      const useAudioUrl = audioUrl && this.webhookBaseUrl && this.webhookBaseUrl.startsWith('http');
+      this.logger.log(`[USER-RESPONSE] Using audio URL: ${useAudioUrl}`);
+
       const twiml = this.twilioService.generateGatherTwiML({
         text: agentResponse,
-        audioUrl,
+        audioUrl: useAudioUrl ? audioUrl : undefined,
         actionUrl,
         timeout: 5,
-        speechTimeout: 'auto',
+        speechTimeout: '2',
       });
 
       this.logger.log(`[USER-RESPONSE] TwiML generated successfully for turn ${turnNumber}`);

@@ -155,7 +155,7 @@ export class VoiceCallsController {
 
         // Generate a new Gather to listen for user response again
         const retryActionUrl = `/api/voice-calls/webhook/response/${callId}?turn=${turnNumber}&retry=${retryCount + 1}`;
-        const retryTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="speech" action="${retryActionUrl}" method="POST" timeout="5" speechTimeout="auto" language="es-ES" enhanced="true"><Say language="es-ES" voice="Polly.Lucia">Lo siento, no te he escuchado. ¿Puedes repetir?</Say></Gather><Redirect method="POST">${retryActionUrl}</Redirect></Response>`;
+        const retryTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="speech" action="${retryActionUrl}" method="POST" timeout="5" speechTimeout="2" language="es-ES" enhanced="true" speechModel="phone_call"><Say language="es-ES" voice="Polly.Lucia">Lo siento, no te he escuchado. ¿Puedes repetir?</Say></Gather><Redirect method="POST">${retryActionUrl}</Redirect></Response>`;
 
         this.logger.debug(`[WEBHOOK-RESPONSE] Sending retry TwiML with new Gather (attempt ${retryCount + 1})`);
         res.type('text/xml');
