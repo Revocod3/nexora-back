@@ -90,7 +90,7 @@ export class VoiceCallsService {
       });
 
       // Initiate call via Twilio
-      const webhookUrl = `${this.webhookBaseUrl}/voice-calls/webhook/incoming/${call.id}`;
+      const webhookUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/incoming/${call.id}`;
 
       const twilioResult = await this.twilioService.makeCall({
         to: dto.toNumber,
@@ -148,7 +148,7 @@ export class VoiceCallsService {
       const audioUrl = await this.generateAndUploadAudio(initialMessage, callId, 0);
 
       // Generate TwiML with Gather for user response
-      const actionUrl = `${this.webhookBaseUrl}/voice-calls/webhook/response/${callId}`;
+      const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}`;
       const twiml = this.twilioService.generateGatherTwiML({
         text: initialMessage,
         audioUrl,
@@ -227,7 +227,7 @@ export class VoiceCallsService {
       const audioUrl = await this.generateAndUploadAudio(agentResponse, callId, turnNumber);
 
       // Generate TwiML with Gather for next user response
-      const actionUrl = `${this.webhookBaseUrl}/voice-calls/webhook/response/${callId}?turn=${turnNumber + 1}`;
+      const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}?turn=${turnNumber + 1}`;
       const twiml = this.twilioService.generateGatherTwiML({
         text: agentResponse,
         audioUrl,

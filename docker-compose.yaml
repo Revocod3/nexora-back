@@ -71,6 +71,14 @@ services:
       # OpenAI - Integrated Agent Logic
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      # Twilio - Voice Calls
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+      TWILIO_WEBHOOK_BASE_URL: ${TWILIO_WEBHOOK_BASE_URL}
+      # ElevenLabs - Text-to-Speech
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-h2cd3gvcqTp3m65Dysk7}
       # WhatsApp Connector Callback
       WHATSAPP_CALLBACK_URL: http://whatsapp:3011/wa/send
       # Tenant

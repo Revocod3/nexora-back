@@ -38,7 +38,7 @@ export class TwilioService {
         to: params.to,
         from: this.fromNumber,
         url: params.webhookUrl,
-        statusCallback: `${this.webhookBaseUrl}/voice-calls/webhook/status/${params.callId}`,
+        statusCallback: `${this.webhookBaseUrl}/api/voice-calls/webhook/status/${params.callId}`,
         statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
         statusCallbackMethod: 'POST',
         // Recording disabled to save costs (~$0.15-0.25/call)
@@ -46,7 +46,7 @@ export class TwilioService {
         machineDetection: 'DetectMessageEnd',
         machineDetectionTimeout: 30,
         asyncAmd: 'true',
-        asyncAmdStatusCallback: `${this.webhookBaseUrl}/voice-calls/webhook/amd/${params.callId}`,
+        asyncAmdStatusCallback: `${this.webhookBaseUrl}/api/voice-calls/webhook/amd/${params.callId}`,
         asyncAmdStatusCallbackMethod: 'POST',
       });
 

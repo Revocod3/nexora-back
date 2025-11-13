@@ -135,7 +135,7 @@ export class VoiceCallsController {
       // If no speech detected, ask again
       if (!speechResult || speechResult.trim() === '') {
         this.logger.warn('No speech detected, prompting again');
-        const twiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-ES">Lo siento, no te he escuchado. ¿Puedes repetir?</Say><Redirect method="POST">/voice-calls/webhook/response/' + callId + '?turn=' + turnNumber + '</Redirect></Response>';
+        const twiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-ES">Lo siento, no te he escuchado. ¿Puedes repetir?</Say><Redirect method="POST">/api/voice-calls/webhook/response/' + callId + '?turn=' + turnNumber + '</Redirect></Response>';
         res.type('text/xml');
         res.status(HttpStatus.OK).send(twiml);
         return;
