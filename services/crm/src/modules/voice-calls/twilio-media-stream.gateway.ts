@@ -16,6 +16,7 @@ import {
   encodePcm16ToBase64,
   decodeBase64ToPcm16,
 } from './audio-converter.util';
+import * as WebSocket from 'ws';
 
 interface TwilioWebSocket extends WebSocket {
   callSid?: string;

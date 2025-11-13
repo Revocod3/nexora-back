@@ -318,8 +318,8 @@ export class VoiceCallsController {
 
       // Generate Media Stream TwiML
       const twiml = this.twilioService.generateMediaStreamTwiML({
-        tenantId: call.tenantId,
-        phoneNumber: call.toNumber,
+        tenantId: call.tenant.id,
+        phoneNumber: call.to_number,
         conversationId: call.id,
       });
 
