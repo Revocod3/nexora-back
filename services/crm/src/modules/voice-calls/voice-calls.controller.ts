@@ -170,10 +170,7 @@ export class VoiceCallsController {
     try {
       this.logger.log(`Status webhook for callId: ${callId}, status: ${body.CallStatus}`);
 
-      await this.voiceCallsService.updateCallStatus(
-        callId,
-        body.CallStatus || 'unknown',
-      );
+      await this.voiceCallsService.updateCallStatus(callId, body.CallStatus || 'unknown');
 
       res.status(HttpStatus.OK).send({ success: true });
     } catch (error: any) {
@@ -183,31 +180,20 @@ export class VoiceCallsController {
   }
 
   /**
-   * Webhook: Handle recording status
+   * Webhook: Handle recording status (DISABLED - recordings not used to save costs)
+   * Transcripts are saved in database instead from Speech-to-Text
    */
   @Post('webhook/recording/:callId')
-  @ApiOperation({ summary: 'Twilio webhook for recording (internal)' })
+  @ApiOperation({ summary: 'Twilio webhook for recording (disabled, not used)' })
   async handleRecording(
     @Param('callId') callId: string,
     @Body() body: TwilioWebhookDto,
     @Res() res: Response,
   ) {
-    try {
-      this.logger.log(`Recording webhook for callId: ${callId}`);
-
-      if (body.RecordingUrl) {
-        await this.voiceCallsService.updateCallStatus(
-          callId,
-          'completed',
-          body.RecordingUrl,
-        );
-      }
-
-      res.status(HttpStatus.OK).send({ success: true });
-    } catch (error: any) {
-      this.logger.error(`Error handling recording: ${error.message}`, error.stack);
-      res.status(HttpStatus.OK).send({ success: false, error: error.message });
-    }
+    // Recording feature disabled to save ~$0.15-0.25 per call
+    // Transcript is already saved in database from Speech-to-Text
+    this.logger.debug(`Recording webhook received for callId: ${callId} (feature disabled)`);
+    res.status(HttpStatus.OK).send({ success: true });
   }
 
   /**

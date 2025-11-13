@@ -297,7 +297,7 @@ export class VoiceCallsService {
   /**
    * Update call status from Twilio webhook
    */
-  async updateCallStatus(callId: string, status: string, recordingUrl?: string): Promise<void> {
+  async updateCallStatus(callId: string, status: string): Promise<void> {
     try {
       const call = await this.callRepository.findOne({ where: { id: callId } });
       if (!call) {
@@ -320,10 +320,6 @@ export class VoiceCallsService {
       };
 
       call.status = statusMap[status] || call.status;
-
-      if (recordingUrl) {
-        call.recording_url = recordingUrl;
-      }
 
       await this.callRepository.save(call);
       this.logger.log(`Call ${callId} status updated to: ${status}`);

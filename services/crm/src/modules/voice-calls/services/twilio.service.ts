@@ -41,9 +41,8 @@ export class TwilioService {
         statusCallback: `${this.webhookBaseUrl}/voice-calls/webhook/status/${params.callId}`,
         statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
         statusCallbackMethod: 'POST',
-        record: true,
-        recordingStatusCallback: `${this.webhookBaseUrl}/voice-calls/webhook/recording/${params.callId}`,
-        recordingStatusCallbackMethod: 'POST',
+        // Recording disabled to save costs (~$0.15-0.25/call)
+        // Transcript is already saved in database from Speech-to-Text
         machineDetection: 'DetectMessageEnd',
         machineDetectionTimeout: 30,
         asyncAmd: 'true',
@@ -174,15 +173,11 @@ export class TwilioService {
   }
 
   /**
-   * Get recording URL
+   * Get recording URL (currently disabled to save costs)
+   * Transcripts are saved in database instead
    */
   async getRecording(recordingSid: string): Promise<string> {
-    try {
-      const recording = await this.client.recordings(recordingSid).fetch();
-      return `https://api.twilio.com${recording.uri.replace('.json', '.mp3')}`;
-    } catch (error: any) {
-      this.logger.error(`Error fetching recording ${recordingSid}: ${error.message}`);
-      throw error;
-    }
+    this.logger.warn('Recording feature is disabled. Use conversation_transcript from database.');
+    return '';
   }
 }
