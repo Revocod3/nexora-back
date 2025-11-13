@@ -45,10 +45,18 @@ export class VoiceCallsService {
 
   /**
    * Create and initiate an outbound call
+   * @param tenantId Tenant ID
+   * @param dto Call creation data
+   * @param useRealtime If true, uses Media Streams + OpenAI Realtime API (NEW)
    */
-  async createOutboundCall(tenantId: string, dto: CreateCallDto): Promise<Call> {
+  async createOutboundCall(
+    tenantId: string,
+    dto: CreateCallDto,
+    useRealtime = false,
+  ): Promise<Call> {
     try {
-      this.logger.log(`Creating outbound call to ${dto.toNumber}`);
+      const mode = useRealtime ? 'REALTIME' : 'LEGACY';
+      this.logger.log(`Creating ${mode} outbound call to ${dto.toNumber}`);
 
       // Get tenant
       const tenant = { id: tenantId } as Tenant;
@@ -74,24 +82,34 @@ export class VoiceCallsService {
         status: CallStatus.QUEUED,
         from_number: fromNumber,
         to_number: dto.toNumber,
-        metadata: dto.metadata || {},
+        metadata: {
+          ...dto.metadata,
+          useRealtime, // Track which architecture is being used
+        },
         conversation_transcript: [],
       });
 
       await this.callRepository.save(call);
 
-      // Initialize conversation state
-      this.conversationStates.set(call.id, {
-        history: [],
-        context: {
-          contactName: dto.contactName,
-          businessName: dto.businessName,
-        },
-      });
+      // Initialize conversation state (only needed for legacy mode)
+      if (!useRealtime) {
+        this.conversationStates.set(call.id, {
+          history: [],
+          context: {
+            contactName: dto.contactName,
+            businessName: dto.businessName,
+          },
+        });
+      }
+
+      // Determine webhook URL based on mode
+      const webhookPath = useRealtime
+        ? `/api/voice-calls/webhook/realtime/incoming/${call.id}`
+        : `/api/voice-calls/webhook/incoming/${call.id}`;
+
+      const webhookUrl = `${this.webhookBaseUrl}${webhookPath}`;
 
       // Initiate call via Twilio
-      const webhookUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/incoming/${call.id}`;
-
       const twilioResult = await this.twilioService.makeCall({
         to: dto.toNumber,
         callId: call.id,
