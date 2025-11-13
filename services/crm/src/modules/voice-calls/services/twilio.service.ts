@@ -78,7 +78,7 @@ export class TwilioService {
       input: ['speech'],
       action: params.actionUrl,
       method: 'POST',
-      timeout: params.timeout || 5,
+      timeout: params.timeout || 10,
       speechTimeout: params.speechTimeout || 'auto',
       language: 'es-ES',
       enhanced: true,
@@ -96,7 +96,14 @@ export class TwilioService {
       );
     }
 
-    // If no input is received, redirect
+    // If no input is received after timeout, prompt again
+    twiml.say(
+      {
+        voice: 'Polly.Lucia',
+        language: 'es-ES',
+      },
+      '¿Sigues ahí? Por favor, responde.'
+    );
     twiml.redirect(params.actionUrl);
 
     return twiml.toString();
