@@ -45,7 +45,9 @@
     "reflect-metadata": "^0.1.0",
     "rxjs": "^7.0.0",
     "typeorm": "^0.3.0",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "twilio": "^5.3.5",
+    "elevenlabs": "^1.59.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
