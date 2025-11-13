@@ -148,7 +148,7 @@ export class VoiceCallsService {
       const audioUrl = await this.generateAndUploadAudio(initialMessage, callId, 0);
 
       // Generate TwiML with Gather for user response
-      const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}`;
+      const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}?turn=0`;
       const twiml = this.twilioService.generateGatherTwiML({
         text: initialMessage,
         audioUrl,
@@ -394,7 +394,7 @@ export class VoiceCallsService {
       await fs.writeFile(filePath, audioBuffer);
 
       // Return public URL (this needs to be served by your server)
-      const publicUrl = `${this.webhookBaseUrl}/voice-calls/audio/${fileName}`;
+      const publicUrl = `${this.webhookBaseUrl}/api/voice-calls/audio/${fileName}`;
 
       this.logger.debug(`Audio generated and saved: ${publicUrl}`);
 
