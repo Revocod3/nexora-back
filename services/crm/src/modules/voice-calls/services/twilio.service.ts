@@ -64,6 +64,7 @@ export class TwilioService {
 
   /**
    * Generate TwiML for speech gathering (using Gather)
+   * LEGACY: Use generateMediaStreamTwiML for better latency with OpenAI Realtime API
    */
   generateGatherTwiML(params: {
     text: string;
@@ -105,6 +106,42 @@ export class TwilioService {
       '¿Sigues ahí? Por favor, responde.'
     );
     twiml.redirect(params.actionUrl);
+
+    return twiml.toString();
+  }
+
+  /**
+   * Generate TwiML for Media Streams (WebSocket bidirectional audio)
+   * Used with OpenAI Realtime API for ultra-low latency conversations
+   */
+  generateMediaStreamTwiML(params: {
+    tenantId: string;
+    phoneNumber: string;
+    conversationId?: string;
+  }): string {
+    const twiml = new twilio.twiml.VoiceResponse();
+
+    // Connect to WebSocket endpoint for Media Streams
+    const connect = twiml.connect();
+    const stream = connect.stream({
+      url: `wss://${this.webhookBaseUrl.replace(/^https?:\/\//, '')}/api/voice-calls/media-stream`,
+    });
+
+    // Pass custom parameters to the WebSocket
+    stream.parameter({
+      name: 'tenantId',
+      value: params.tenantId,
+    });
+    stream.parameter({
+      name: 'phoneNumber',
+      value: params.phoneNumber,
+    });
+    if (params.conversationId) {
+      stream.parameter({
+        name: 'conversationId',
+        value: params.conversationId,
+      });
+    }
 
     return twiml.toString();
   }

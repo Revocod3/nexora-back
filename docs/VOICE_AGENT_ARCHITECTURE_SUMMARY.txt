@@ -1,0 +1,177 @@
+VOICE AGENT ARCHITECTURE SUMMARY
+================================
+
+CURRENT IMPLEMENTATION: Twilio Gather (Request-Response Pattern)
+Location: /home/user/nexora-back/services/crm/src/modules/voice-calls/
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         CALL FLOW DIAGRAM                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  API Request              Webhook Responses (Cyclic)                         │
+│      │                     ┌─────────────────────────┐                      │
+│      ▼                     │                         │                      │
+│  ┌──────────┐         ┌────▼────┐          ┌──────────┐                    │
+│  │ POST     │         │ Handle  │          │ Generate │                    │
+│  │ /voice-  │────────▶│ Call    │─────────▶│ Message  │                    │
+│  │ calls    │         │ Answered│          │(OpenAI) │                    │
+│  └──────────┘         └────┬────┘          └────┬─────┘                    │
+│       │                     │                    │                         │
+│       │                     │                    │                         │
+│       ▼                     │                ┌───▼──────┐                  │
+│  ┌─────────────┐           │                │ Text-to- │                  │
+│  │ Create Call │           │                │ Speech   │                  │
+│  │ Record (DB) │           │                │(11Labs) │                  │
+│  └─────────────┘           │                └───┬──────┘                  │
+│       │                     │                    │                         │
+│       └────────────────┐    │                    ▼                         │
+│                        │    │            ┌──────────────┐                  │
+│  ┌──────────────────┐  │    │            │ Generate     │                  │
+│  │ Twilio.makeCall()│  │    │            │ TwiML Gather │                  │
+│  │ Start Ringing    │  │    │            └──────────────┘                  │
+│  └────────┬─────────┘  │    │                   │                         │
+│           │            │    │                   │ XML Response             │
+│           │            │    │                   │                         │
+│           │            │    └───────────────────▼                         │
+│           │ User Answers (auto)                  │                         │
+│           └──────────────────────────────────────▼                        │
+│                                            Twilio Plays Audio             │
+│                                         + Waits for Speech               │
+│                                         + Webhook Callback               │
+│                                                                          │
+│                        ┌────────────────────────────────┐                 │
+│                        │  User Speaks → STT Result      │                 │
+│                        │  POST /webhook/response/{id}   │                 │
+│                        └────────────┬───────────────────┘                 │
+│                                     │                                     │
+│                                     ▼                                     │
+│                            ┌──────────────────┐                           │
+│                            │ ConversationSvc  │                           │
+│                            │ .generateResponse│                           │
+│                            │ (OpenAI GPT-4o) │                           │
+│                            └────────┬─────────┘                           │
+│                                     │                                     │
+│              ┌──────────────────────┼──────────────────────┐              │
+│              │                      │                      │              │
+│              ▼                      ▼                      ▼              │
+│         ┌─────────┐      ┌──────────────┐       ┌────────────┐           │
+│         │ Update  │      │ Check Loop   │       │ Generate   │           │
+│         │ DB      │      │ Termination  │       │ Audio      │           │
+│         │ Tran    │      │ Conditions   │       │ (11Labs)   │           │
+│         └─────────┘      └──────┬───────┘       └────────────┘           │
+│                                 │                       │                 │
+│                       ┌─────────┴────────┐              │                │
+│                       │                  │              │                │
+│                 ┌─────▼──┐         ┌──────▼──┐          │                │
+│                 │ Continue│         │ EndCall()          │                │
+│                 │ Loop   │         │- Analyze │          │                │
+│                 │ ────────────────▶│  Outcome │          │                │
+│                 └────────┘         │- Save DB │          │                │
+│                                    │- Hangup  │          │                │
+│                                    └──────────┘          │                │
+│                                                         │                │
+│                    (Max 30 turns per call)             ▼                 │
+│                                                   ┌──────────┐           │
+│                                                   │ Return   │           │
+│                                                   │ TwiML    │           │
+│                                                   │ Hangup   │           │
+│                                                   └──────────┘           │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+KEY INTEGRATION POINTS
+======================
+
+1. TWILIO (Webhook-driven, Gather pattern)
+   - File: twilio.service.ts (191 lines)
+   - STT: Twilio built-in (Spanish enhanced)
+   - TTS: ElevenLabs + Play
+   - Latency: 2-3 seconds per turn (wait for speech → webhook → response)
+
+2. OPENAI GPT-4o (Request-Response)
+   - File: conversation.service.ts (268 lines)
+   - Model: gpt-4o
+   - Temperature: 0.7
+   - Max Tokens: 150 (for brevity)
+   - System Prompt: Sofia SDR agent (126 lines)
+
+3. ELEVENLABS (Sequential TTS)
+   - File: elevenlabs.service.ts (91 lines)
+   - Voice: h2cd3gvcqTp3m65Dysk7 (Sofia)
+   - Model: eleven_multilingual_v2
+   - Storage: /tmp (NOT production-ready)
+   - Speed: 2-3 seconds per 150 chars
+
+4. ORCHESTRATION (In-Memory State)
+   - File: voice-calls.service.ts (409 lines)
+   - State Storage: Map<string, ConversationState>
+   - Persistence: Only saved at call end
+   - Database: TypeORM Call entity (PostgreSQL)
+
+CALL STATISTICS
+===============
+- Total Code Lines: ~1,411
+- Conversation History: Stored as JSONB in PostgreSQL
+- Outcome Classification: 5 types (qualified, not_interested, callback, voicemail, booked_demo)
+- Cost per Call: $0.24-0.56 USD
+- Typical Duration: 2-5 minutes
+- Turns per Call: 5-15 (max 30)
+- STT Language: Spanish (es-ES)
+- TTS Language: Spanish (auto-detected)
+
+MAIN WEBHOOK SEQUENCE
+=====================
+POST /webhook/incoming/:callId
+  ↓
+[Generate Initial Message + Audio]
+  ↓
+Return TwiML <Gather>
+  ↓
+User Speaks → Twilio STT
+  ↓
+POST /webhook/response/:callId?turn=N
+  ↓
+[Generate Response + Audio]
+  ↓
+Check Termination?
+  ├─ Yes → Return Hangup TwiML
+  └─ No  → Return next <Gather> TwiML (turn++)
+  ↓
+Loop to User Speaks
+  ↓
+POST /webhook/status/:callId
+  ↓
+Update DB + Analyze Outcome
+
+CRITICAL LIMITATIONS FOR REALTIME API MIGRATION
+================================================
+1. Latency: 2-3 seconds per turn (vs. 200-300ms with Realtime)
+2. STT: Twilio built-in (vs. OpenAI Realtime with confidence)
+3. TTS: ElevenLabs sequential (vs. OpenAI native + streaming)
+4. State: In-memory only (vs. persistent Redis)
+5. WebSocket: HTTP webhooks (vs. bidirectional WebSocket)
+6. Audio: File-based (vs. raw audio streams)
+7. Interruption: No support (vs. native interruption handling)
+8. Token Tracking: No tracking (vs. integrated usage tracking)
+
+READY FOR MIGRATION?
+====================
+✓ Keep:
+  - Call entity schema & database
+  - Authentication (JWT)
+  - API endpoints for call creation
+  - Outcome analysis logic (reusable)
+  - Agent system prompt (mostly reusable)
+  
+✗ Replace:
+  - TwilioService (70% rewrite - WebSocket + Media Streams)
+  - ConversationService (40% rewrite - streaming + interruption)
+  - ElevenLabsService (delete - use OpenAI TTS)
+  
+△ Add:
+  - WebSocket handler for Media Streams
+  - Audio encoding/decoding (mu-law to PCM)
+  - Redis for distributed state
+  - Real-time message routing
+  - Reconnection/recovery logic
+

@@ -7,6 +7,10 @@ import { ElevenLabsService } from './services/elevenlabs.service';
 import { TwilioService } from './services/twilio.service';
 import { ConversationService } from './services/conversation.service';
 import { Call, User } from '../../entities';
+import { RedisService } from '../../redis/redis.service';
+import { RealtimeSessionService } from './realtime-session.service';
+import { OpenAIRealtimeService } from './openai-realtime.service';
+import { TwilioMediaStreamGateway } from './twilio-media-stream.gateway';
 
 @Module({
   imports: [
@@ -15,11 +19,17 @@ import { Call, User } from '../../entities';
   ],
   controllers: [VoiceCallsController],
   providers: [
+    // Legacy services (Gather + OpenAI + ElevenLabs)
     VoiceCallsService,
     ElevenLabsService,
     TwilioService,
     ConversationService,
+    // New realtime services (Media Streams + OpenAI Realtime API)
+    RedisService,
+    RealtimeSessionService,
+    OpenAIRealtimeService,
+    TwilioMediaStreamGateway,
   ],
-  exports: [VoiceCallsService],
+  exports: [VoiceCallsService, RealtimeSessionService],
 })
 export class VoiceCallsModule {}

@@ -17,13 +17,17 @@ import { CreateCallDto, TwilioWebhookDto } from './dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentTenant } from '../auth/decorators/current-tenant.decorator';
 import { CallStatus } from '../../entities';
+import { TwilioService } from './services/twilio.service';
 
 @ApiTags('Voice Calls')
 @Controller('voice-calls')
 export class VoiceCallsController {
   private readonly logger = new Logger(VoiceCallsController.name);
 
-  constructor(private readonly voiceCallsService: VoiceCallsService) {}
+  constructor(
+    private readonly voiceCallsService: VoiceCallsService,
+    private readonly twilioService: TwilioService,
+  ) {}
 
   /**
    * Create an outbound call
@@ -251,6 +255,77 @@ export class VoiceCallsController {
     } catch (error: any) {
       this.logger.error(`Error serving audio: ${error.message}`, error.stack);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Error serving audio');
+    }
+  }
+
+  /**
+   * NEW REALTIME API: Create an outbound call with Media Streams + OpenAI Realtime API
+   * This endpoint uses the new architecture for ultra-low latency conversations
+   */
+  @Post('realtime')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Create outbound call with Realtime API (NEW - low latency)',
+    description:
+      'Uses Twilio Media Streams + OpenAI Realtime API for sub-second latency conversations. This is the new recommended method.',
+  })
+  @ApiResponse({ status: 201, description: 'Call created successfully' })
+  async createRealtimeCall(
+    @CurrentTenant() tenantId: string,
+    @Body() createCallDto: CreateCallDto,
+  ) {
+    this.logger.log(
+      `Creating REALTIME call for tenant ${tenantId} to ${createCallDto.toNumber}`,
+    );
+    const call = await this.voiceCallsService.createOutboundCall(
+      tenantId,
+      createCallDto,
+      true, // Use realtime
+    );
+    return {
+      success: true,
+      data: call,
+      mode: 'realtime',
+    };
+  }
+
+  /**
+   * Webhook: Generate TwiML for Media Streams (Realtime API)
+   * This webhook is called when a call is answered and sets up the Media Stream
+   */
+  @Post('webhook/realtime/incoming/:callId')
+  @ApiOperation({
+    summary: 'Twilio webhook for realtime call setup (internal)',
+  })
+  async handleRealtimeIncoming(
+    @Param('callId') callId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      this.logger.log(`Realtime incoming webhook for callId: ${callId}`);
+
+      // Get call details
+      const call = await this.voiceCallsService.getCall(callId);
+
+      // Generate Media Stream TwiML
+      const twiml = this.twilioService.generateMediaStreamTwiML({
+        tenantId: call.tenantId,
+        phoneNumber: call.toNumber,
+        conversationId: call.id,
+      });
+
+      res.type('text/xml');
+      res.status(HttpStatus.OK).send(twiml);
+    } catch (error: any) {
+      this.logger.error(
+        `Error handling realtime incoming call: ${error.message}`,
+        error.stack,
+      );
+      res.type('text/xml');
+      res.status(HttpStatus.OK).send(
+        '<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-ES">Lo siento, ha ocurrido un error.</Say><Hangup/></Response>',
+      );
     }
   }
 }
