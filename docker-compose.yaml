@@ -26,7 +26,7 @@ services:
     networks:
       - nexora-internal
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexora_user}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexora_user} -d ${POSTGRES_DB:-nexora_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -47,7 +47,7 @@ services:
     ports:
       - "${CRM_PORT:-8000}:8000"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: 8000
       # Redis Connection
       REDIS_HOST: redis
@@ -65,6 +65,9 @@ services:
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
       # API Keys
       CRM_INTERNAL_API_KEY: ${CRM_INTERNAL_API_KEY}
+      # JWT Authentication
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       # OpenAI - Integrated Agent Logic
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
@@ -72,6 +75,14 @@ services:
       WHATSAPP_CALLBACK_URL: http://whatsapp:3011/wa/send
       # Tenant
       SINGLE_TENANT_ID: ${SINGLE_TENANT_ID:-tenant-prod}
+      # Frontend
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      # WhatsApp Service URL (internal)
+      WHATSAPP_SERVICE_URL: http://whatsapp:3011/wa
+    volumes:
+      # Development: mount source code for hot reload
+      - ./services/crm/src:/app/services/crm/src:ro
+      - ./shared:/app/shared:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -80,7 +91,7 @@ services:
     networks:
       - nexora-internal
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -137,6 +148,7 @@ services:
       WA_ENCRYPTION_KEY: ${WA_ENCRYPTION_KEY}
       # Tenant
       SINGLE_TENANT_ID: ${SINGLE_TENANT_ID:-tenant-prod}
+      WA_DEFAULT_TENANT_ID: ${WA_DEFAULT_TENANT_ID:-01624ba8-f6ec-4c9a-8e20-27052429f50e}
     depends_on:
       redis:
         condition: service_healthy

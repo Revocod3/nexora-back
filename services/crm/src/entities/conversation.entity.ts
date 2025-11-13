@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { BaseEntityWithTimestamps } from './base.entity';
-import { Lead } from './lead.entity';
+import { User } from './user.entity';
 import { Message } from './message.entity';
 
 export enum ConversationStatus {
@@ -14,9 +14,9 @@ export class Conversation extends BaseEntityWithTimestamps {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Lead, (lead) => lead.conversations)
-  @JoinColumn({ name: 'lead_id' })
-  lead!: Lead;
+  @ManyToOne(() => User, (user) => user.conversations)
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
 
   @Column({ length: 50 })
   channel!: string; // whatsapp, telegram, email, fb_ads
