@@ -113,6 +113,15 @@ pnpm dev:whatsapp   # Terminal 2
 - **Monorepo**: Turborepo + pnpm workspaces
 - **Container**: Docker + Docker Compose
 
+## 🔄 CI/CD
+
+Automated deployment pipeline con GitHub Actions:
+- ✅ **CI**: Tests, linting, build verification en cada PR
+- 🚀 **CD**: Auto-deployment a Hetzner en cada commit a `main`
+- 🔧 Manual deployment trigger disponible
+
+Para configurar el pipeline, ver [CI/CD Setup Guide](./CI-CD-SETUP.md)
+
 ## 📚 Documentation
 
 - [Deployment Guide](./DEPLOYMENT.md) - Comprehensive deployment instructions
