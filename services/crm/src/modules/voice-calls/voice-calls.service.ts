@@ -118,15 +118,18 @@ export class VoiceCallsService {
    */
   async handleCallAnswered(callId: string): Promise<string> {
     try {
-      this.logger.log(`Handling call answered for callId: ${callId}`);
+      this.logger.log(`[CALL-ANSWERED] Starting for callId: ${callId}`);
 
       const call = await this.callRepository.findOne({ where: { id: callId } });
       if (!call) {
+        this.logger.error(`[CALL-ANSWERED] Call not found: ${callId}`);
         throw new NotFoundException(`Call with ID ${callId} not found`);
       }
+      this.logger.log(`[CALL-ANSWERED] Call found, status: ${call.status}`);
 
       // Get initial message from conversation service
       const initialMessage = this.conversationService.getInitialMessage();
+      this.logger.log(`[CALL-ANSWERED] Initial message: "${initialMessage.substring(0, 100)}..."`);
 
       // Add to conversation history
       const state = this.conversationStates.get(callId);
@@ -136,6 +139,9 @@ export class VoiceCallsService {
           content: initialMessage,
           timestamp: new Date().toISOString(),
         });
+        this.logger.log(`[CALL-ANSWERED] Added to conversation history, total messages: ${state.history.length}`);
+      } else {
+        this.logger.warn(`[CALL-ANSWERED] No conversation state found for callId: ${callId}`);
       }
 
       // Update call transcript
@@ -143,12 +149,17 @@ export class VoiceCallsService {
       call.status = CallStatus.IN_PROGRESS;
       call.started_at = new Date();
       await this.callRepository.save(call);
+      this.logger.log(`[CALL-ANSWERED] Call status updated to IN_PROGRESS`);
 
       // Generate audio for initial message
+      this.logger.log(`[CALL-ANSWERED] Starting audio generation...`);
       const audioUrl = await this.generateAndUploadAudio(initialMessage, callId, 0);
+      this.logger.log(`[CALL-ANSWERED] Audio generated, URL: ${audioUrl || 'EMPTY (will use TTS fallback)'}`);
 
       // Generate TwiML with Gather for user response
       const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}?turn=0`;
+      this.logger.log(`[CALL-ANSWERED] Action URL: ${actionUrl}`);
+
       const twiml = this.twilioService.generateGatherTwiML({
         text: initialMessage,
         audioUrl,
@@ -156,6 +167,9 @@ export class VoiceCallsService {
         timeout: 5,
         speechTimeout: 'auto',
       });
+
+      this.logger.log(`[CALL-ANSWERED] TwiML generated successfully, length: ${twiml.length} chars`);
+      this.logger.debug(`[CALL-ANSWERED] TwiML content: ${twiml}`);
 
       return twiml;
     } catch (error: any) {
@@ -172,16 +186,18 @@ export class VoiceCallsService {
    */
   async handleUserResponse(callId: string, speechResult: string, turnNumber: number): Promise<string> {
     try {
-      this.logger.log(`Handling user response for callId: ${callId}, turn: ${turnNumber}`);
-      this.logger.debug(`User said: "${speechResult}"`);
+      this.logger.log(`[USER-RESPONSE] Starting for callId: ${callId}, turn: ${turnNumber}`);
+      this.logger.log(`[USER-RESPONSE] User said: "${speechResult}"`);
 
       const call = await this.callRepository.findOne({ where: { id: callId } });
       if (!call) {
+        this.logger.error(`[USER-RESPONSE] Call not found: ${callId}`);
         throw new NotFoundException(`Call with ID ${callId} not found`);
       }
 
       const state = this.conversationStates.get(callId);
       if (!state) {
+        this.logger.error(`[USER-RESPONSE] No conversation state for callId: ${callId}`);
         throw new Error(`No conversation state found for callId: ${callId}`);
       }
 
@@ -191,13 +207,16 @@ export class VoiceCallsService {
         content: speechResult,
         timestamp: new Date().toISOString(),
       });
+      this.logger.log(`[USER-RESPONSE] Added user input to history, total messages: ${state.history.length}`);
 
       // Check if user wants to end call
       if (this.conversationService.shouldEndCall(speechResult)) {
+        this.logger.log(`[USER-RESPONSE] User requested to end call`);
         return await this.endCall(callId, 'Usuario terminó la llamada');
       }
 
       // Generate agent response using OpenAI
+      this.logger.log(`[USER-RESPONSE] Generating AI response...`);
       const agentResponse = await this.conversationService.generateResponse({
         conversationHistory: state.history.map(h => ({
           role: h.role === 'assistant' ? 'assistant' : 'user',
@@ -206,6 +225,7 @@ export class VoiceCallsService {
         userInput: speechResult,
         context: state.context,
       });
+      this.logger.log(`[USER-RESPONSE] AI response (${agentResponse.length} chars): "${agentResponse.substring(0, 100)}..."`);
 
       // Add agent response to history
       state.history.push({
@@ -217,17 +237,23 @@ export class VoiceCallsService {
       // Update database
       call.conversation_transcript = state.history;
       await this.callRepository.save(call);
+      this.logger.log(`[USER-RESPONSE] Database updated with transcript`);
 
       // Check if we should end the call (max turns or goodbye detected in response)
       if (state.history.length > 30 || agentResponse.toLowerCase().includes('adiós') || agentResponse.toLowerCase().includes('hasta luego')) {
+        this.logger.log(`[USER-RESPONSE] Ending call (max turns or goodbye detected)`);
         return await this.endCall(callId, agentResponse);
       }
 
       // Generate audio for agent response
+      this.logger.log(`[USER-RESPONSE] Generating audio for turn ${turnNumber}...`);
       const audioUrl = await this.generateAndUploadAudio(agentResponse, callId, turnNumber);
+      this.logger.log(`[USER-RESPONSE] Audio URL: ${audioUrl || 'EMPTY (will use TTS)'}`);
 
       // Generate TwiML with Gather for next user response
       const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}?turn=${turnNumber + 1}`;
+      this.logger.log(`[USER-RESPONSE] Next action URL: ${actionUrl}`);
+
       const twiml = this.twilioService.generateGatherTwiML({
         text: agentResponse,
         audioUrl,
@@ -235,6 +261,8 @@ export class VoiceCallsService {
         timeout: 5,
         speechTimeout: 'auto',
       });
+
+      this.logger.log(`[USER-RESPONSE] TwiML generated successfully for turn ${turnNumber}`);
 
       return twiml;
     } catch (error: any) {
@@ -382,8 +410,15 @@ export class VoiceCallsService {
    */
   private async generateAndUploadAudio(text: string, callId: string, turnNumber: number): Promise<string> {
     try {
+      this.logger.log(`[AUDIO-GEN] Starting for callId: ${callId}, turn: ${turnNumber}`);
+      this.logger.debug(`[AUDIO-GEN] Text (${text.length} chars): "${text.substring(0, 100)}..."`);
+
       // Generate audio buffer
+      const startTime = Date.now();
       const audioBuffer = await this.elevenLabsService.textToSpeechBuffer(text);
+      const generationTime = Date.now() - startTime;
+
+      this.logger.log(`[AUDIO-GEN] ElevenLabs generated ${audioBuffer.length} bytes in ${generationTime}ms`);
 
       // For now, save to temp directory
       // In production, upload to S3 or CDN
@@ -391,16 +426,25 @@ export class VoiceCallsService {
       const fileName = `call_${callId}_turn_${turnNumber}.mp3`;
       const filePath = path.join(tempDir, fileName);
 
+      this.logger.debug(`[AUDIO-GEN] Writing to: ${filePath}`);
       await fs.writeFile(filePath, audioBuffer);
+
+      // Verify file was written
+      const fsSync = require('fs');
+      if (!fsSync.existsSync(filePath)) {
+        throw new Error(`File was not written successfully: ${filePath}`);
+      }
+      const fileSize = fsSync.statSync(filePath).size;
+      this.logger.log(`[AUDIO-GEN] File written successfully: ${fileSize} bytes`);
 
       // Return public URL (this needs to be served by your server)
       const publicUrl = `${this.webhookBaseUrl}/api/voice-calls/audio/${fileName}`;
 
-      this.logger.debug(`Audio generated and saved: ${publicUrl}`);
+      this.logger.log(`[AUDIO-GEN] SUCCESS - Public URL: ${publicUrl}`);
 
       return publicUrl;
     } catch (error: any) {
-      this.logger.error(`Error generating audio: ${error.message}`);
+      this.logger.error(`[AUDIO-GEN] FAILED for callId ${callId}, turn ${turnNumber}: ${error.message}`, error.stack);
       // Return empty string to fallback to Twilio TTS
       return '';
     }

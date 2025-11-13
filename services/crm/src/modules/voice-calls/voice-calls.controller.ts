@@ -100,13 +100,15 @@ export class VoiceCallsController {
     @Res() res: Response,
   ) {
     try {
-      this.logger.log(`Incoming call webhook for callId: ${callId}`);
+      this.logger.log(`[WEBHOOK-INCOMING] ========== CALL STARTED ========== callId: ${callId}`);
       const twiml = await this.voiceCallsService.handleCallAnswered(callId);
 
+      this.logger.log(`[WEBHOOK-INCOMING] Sending TwiML response (${twiml.length} chars)`);
       res.type('text/xml');
       res.status(HttpStatus.OK).send(twiml);
+      this.logger.log(`[WEBHOOK-INCOMING] Response sent successfully for callId: ${callId}`);
     } catch (error: any) {
-      this.logger.error(`Error handling incoming call: ${error.message}`, error.stack);
+      this.logger.error(`[WEBHOOK-INCOMING] CRITICAL ERROR for callId ${callId}: ${error.message}`, error.stack);
       res.type('text/xml');
       res.status(HttpStatus.OK).send(
         '<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-ES">Lo siento, ha ocurrido un error.</Say><Hangup/></Response>'
@@ -129,28 +131,32 @@ export class VoiceCallsController {
       const speechResult = body.SpeechResult || '';
       const turnNumber = parseInt(turn, 10) || 0;
 
-      this.logger.log(`Response webhook for callId: ${callId}, turn: ${turnNumber}`);
-      this.logger.debug(`Speech result: "${speechResult}"`);
+      this.logger.log(`[WEBHOOK-RESPONSE] callId: ${callId}, turn: ${turnNumber}`);
+      this.logger.debug(`[WEBHOOK-RESPONSE] Body keys: ${Object.keys(body).join(', ')}`);
+      this.logger.debug(`[WEBHOOK-RESPONSE] Speech result: "${speechResult}"`);
 
       // If no speech detected, ask again
       if (!speechResult || speechResult.trim() === '') {
-        this.logger.warn('No speech detected, prompting again');
+        this.logger.warn(`[WEBHOOK-RESPONSE] No speech detected for turn ${turnNumber}, prompting again`);
         const twiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-ES">Lo siento, no te he escuchado. ¿Puedes repetir?</Say><Redirect method="POST">/api/voice-calls/webhook/response/' + callId + '?turn=' + turnNumber + '</Redirect></Response>';
+        this.logger.debug(`[WEBHOOK-RESPONSE] Sending retry TwiML`);
         res.type('text/xml');
         res.status(HttpStatus.OK).send(twiml);
         return;
       }
 
+      this.logger.log(`[WEBHOOK-RESPONSE] Processing user input for turn ${turnNumber}...`);
       const twiml = await this.voiceCallsService.handleUserResponse(
         callId,
         speechResult,
         turnNumber,
       );
 
+      this.logger.log(`[WEBHOOK-RESPONSE] TwiML generated for turn ${turnNumber}, length: ${twiml.length} chars`);
       res.type('text/xml');
       res.status(HttpStatus.OK).send(twiml);
     } catch (error: any) {
-      this.logger.error(`Error handling response: ${error.message}`, error.stack);
+      this.logger.error(`[WEBHOOK-RESPONSE] ERROR for callId ${callId}, turn ${turn}: ${error.message}`, error.stack);
       const errorTwiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-ES">Lo siento, ha ocurrido un error. Adiós.</Say><Hangup/></Response>';
       res.type('text/xml');
       res.status(HttpStatus.OK).send(errorTwiml);
@@ -234,22 +240,40 @@ export class VoiceCallsController {
     @Res() res: Response,
   ) {
     try {
+      this.logger.log(`[AUDIO-SERVE] Request for file: ${fileName}`);
+
       const fs = require('fs');
       const path = require('path');
       const os = require('os');
 
       const filePath = path.join(os.tmpdir(), fileName);
+      this.logger.debug(`[AUDIO-SERVE] Full path: ${filePath}`);
 
       if (!fs.existsSync(filePath)) {
-        this.logger.error(`Audio file not found: ${fileName}`);
+        this.logger.error(`[AUDIO-SERVE] File NOT FOUND: ${fileName} at ${filePath}`);
+        this.logger.error(`[AUDIO-SERVE] Temp dir contents: ${fs.readdirSync(os.tmpdir()).filter((f: string) => f.startsWith('call_')).join(', ')}`);
         return res.status(HttpStatus.NOT_FOUND).send('Audio file not found');
       }
 
+      const fileSize = fs.statSync(filePath).size;
+      this.logger.log(`[AUDIO-SERVE] Found file: ${fileName}, size: ${fileSize} bytes`);
+
       res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Length', fileSize.toString());
+
       const fileStream = fs.createReadStream(filePath);
+
+      fileStream.on('end', () => {
+        this.logger.log(`[AUDIO-SERVE] Successfully streamed: ${fileName}`);
+      });
+
+      fileStream.on('error', (error: any) => {
+        this.logger.error(`[AUDIO-SERVE] Stream error for ${fileName}: ${error.message}`);
+      });
+
       fileStream.pipe(res);
     } catch (error: any) {
-      this.logger.error(`Error serving audio: ${error.message}`, error.stack);
+      this.logger.error(`[AUDIO-SERVE] Error serving audio ${fileName}: ${error.message}`, error.stack);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).send('Error serving audio');
     }
   }
