@@ -124,24 +124,42 @@ export class VoiceCallsController {
   async handleResponse(
     @Param('callId') callId: string,
     @Query('turn') turn: string,
+    @Query('retry') retry: string,
     @Body() body: TwilioWebhookDto,
     @Res() res: Response,
   ) {
     try {
       const speechResult = body.SpeechResult || '';
       const turnNumber = parseInt(turn, 10) || 0;
+      const retryCount = parseInt(retry, 10) || 0;
 
-      this.logger.log(`[WEBHOOK-RESPONSE] callId: ${callId}, turn: ${turnNumber}`);
+      this.logger.log(`[WEBHOOK-RESPONSE] callId: ${callId}, turn: ${turnNumber}, retry: ${retryCount}`);
       this.logger.debug(`[WEBHOOK-RESPONSE] Body keys: ${Object.keys(body).join(', ')}`);
       this.logger.debug(`[WEBHOOK-RESPONSE] Speech result: "${speechResult}"`);
 
-      // If no speech detected, ask again
+      // If no speech detected, ask again (up to 3 retries per turn)
       if (!speechResult || speechResult.trim() === '') {
-        this.logger.warn(`[WEBHOOK-RESPONSE] No speech detected for turn ${turnNumber}, prompting again`);
-        const twiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-ES">Lo siento, no te he escuchado. ¿Puedes repetir?</Say><Redirect method="POST">/api/voice-calls/webhook/response/' + callId + '?turn=' + turnNumber + '</Redirect></Response>';
-        this.logger.debug(`[WEBHOOK-RESPONSE] Sending retry TwiML`);
+        this.logger.warn(`[WEBHOOK-RESPONSE] No speech detected for turn ${turnNumber}, retry ${retryCount}`);
+
+        // After 3 retries, end the call
+        if (retryCount >= 3) {
+          this.logger.error(`[WEBHOOK-RESPONSE] Max retries reached for turn ${turnNumber}, ending call`);
+          const endTwiml = await this.voiceCallsService.endCall(
+            callId,
+            'No he podido escucharte después de varios intentos. Por favor, llámanos de nuevo. Adiós.'
+          );
+          res.type('text/xml');
+          res.status(HttpStatus.OK).send(endTwiml);
+          return;
+        }
+
+        // Generate a new Gather to listen for user response again
+        const retryActionUrl = `/api/voice-calls/webhook/response/${callId}?turn=${turnNumber}&retry=${retryCount + 1}`;
+        const retryTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Gather input="speech" action="${retryActionUrl}" method="POST" timeout="5" speechTimeout="auto" language="es-ES" enhanced="true"><Say language="es-ES" voice="Polly.Lucia">Lo siento, no te he escuchado. ¿Puedes repetir?</Say></Gather><Redirect method="POST">${retryActionUrl}</Redirect></Response>`;
+
+        this.logger.debug(`[WEBHOOK-RESPONSE] Sending retry TwiML with new Gather (attempt ${retryCount + 1})`);
         res.type('text/xml');
-        res.status(HttpStatus.OK).send(twiml);
+        res.status(HttpStatus.OK).send(retryTwiml);
         return;
       }
 

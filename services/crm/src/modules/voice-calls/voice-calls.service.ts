@@ -157,7 +157,7 @@ export class VoiceCallsService {
       this.logger.log(`[CALL-ANSWERED] Audio generated, URL: ${audioUrl || 'EMPTY (will use TTS fallback)'}`);
 
       // Generate TwiML with Gather for user response
-      const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}?turn=0`;
+      const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}?turn=0&retry=0`;
       this.logger.log(`[CALL-ANSWERED] Action URL: ${actionUrl}`);
 
       const twiml = this.twilioService.generateGatherTwiML({
@@ -251,7 +251,7 @@ export class VoiceCallsService {
       this.logger.log(`[USER-RESPONSE] Audio URL: ${audioUrl || 'EMPTY (will use TTS)'}`);
 
       // Generate TwiML with Gather for next user response
-      const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}?turn=${turnNumber + 1}`;
+      const actionUrl = `${this.webhookBaseUrl}/api/voice-calls/webhook/response/${callId}?turn=${turnNumber + 1}&retry=0`;
       this.logger.log(`[USER-RESPONSE] Next action URL: ${actionUrl}`);
 
       const twiml = this.twilioService.generateGatherTwiML({
