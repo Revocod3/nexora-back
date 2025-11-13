@@ -1,9 +1,9 @@
 import { IsString, IsOptional, IsEnum, IsObject, IsUUID } from 'class-validator';
-import { ConversationStatus, MessageDirection, MessageType } from '../entities';
+import { ConversationStatus } from '../entities';
 
 export class CreateConversationDto {
   @IsUUID()
-  lead_id!: string;
+  user_id!: string;
 
   @IsString()
   channel!: string;

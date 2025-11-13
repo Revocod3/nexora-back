@@ -1,15 +1,46 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Security: Helmet
+  // TODO: Re-enable and configure Helmet properly for production
+  // Temporarily disabled to avoid connectivity issues during development
+  // app.use(helmet({
+  //   contentSecurityPolicy: process.env.NODE_ENV === 'production',
+  // }));
+
+  // Enable CORS for frontend
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'idempotency-key'],
+  });
+
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  // Set global prefix for all routes
+  app.setGlobalPrefix('api');
+
   // Swagger
   const config = new DocumentBuilder()
-    .setTitle('Realtec CRM')
-    .setVersion('1.0')
-    .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' })
+    .setTitle('Nexora CRM API')
+    .setDescription('Multi-tenant CRM for salons with WhatsApp integration')
+    .setVersion('1.0.0')
+    .addBearerAuth()
+    .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'api-key')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
@@ -17,5 +48,6 @@ async function bootstrap() {
   const port = process.env.PORT || 8000;
   await app.listen(port);
   console.log(`🚀 CRM running on http://localhost:${port}`);
+  console.log(`📚 API docs available at http://localhost:${port}/api/docs`);
 }
 bootstrap();

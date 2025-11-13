@@ -1,51 +1,139 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ClientsService } from './clients.service';
-import { CreateClientDto, UpdateClientDto } from '../../dto';
-import { Client } from '../../entities';
-import { ApiKeyGuard } from '../../guards/api-key.guard';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User, Appointment, Service, AppointmentStatus } from '../../entities';
+import { CurrentTenant } from '../auth/decorators/current-tenant.decorator';
 
 @ApiTags('clients')
 @Controller('clients')
-@UseGuards(ApiKeyGuard)
 export class ClientsController {
-  constructor(private readonly clientsService: ClientsService) {}
-
-  @Post()
-  @ApiOperation({ summary: 'Create a new client' })
-  @ApiResponse({ status: 201, description: 'Client created successfully', type: Client })
-  create(@Body() createClientDto: CreateClientDto): Promise<Client> {
-    return this.clientsService.create(createClientDto);
-  }
+  constructor(
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+    @InjectRepository(Appointment)
+    private appointmentsRepository: Repository<Appointment>,
+  ) { }
 
   @Get()
-  @ApiOperation({ summary: 'Get all clients' })
-  @ApiResponse({ status: 200, description: 'List of clients', type: [Client] })
-  findAll(): Promise<Client[]> {
-    return this.clientsService.findAll();
+  @ApiOperation({ summary: 'Get all clients for authenticated tenant' })
+  @ApiResponse({ status: 200, description: 'Clients list' })
+  async getClients(@CurrentTenant() tenantId: string) {
+    const tid = tenantId;
+
+    // Get all users for this tenant
+    const users = await this.usersRepository.find({
+      where: { tenant: { id: tid } },
+      order: { created_at: 'DESC' },
+    });
+
+    // Get their last appointments
+    const clientsWithAppointments = await Promise.all(
+      users.map(async (user) => {
+        const lastAppointment = await this.appointmentsRepository.findOne({
+          where: { user: { id: user.id } },
+          order: { scheduled_at: 'DESC' },
+        });
+
+        return {
+          id: user.id,
+          name: user.name || 'N/A',
+          phone: user.phone_e164 || '',
+          lastVisit: lastAppointment?.scheduled_at.toISOString() || null,
+        };
+      }),
+    );
+
+    // Also include clients from appointments without user accounts
+    const appointmentsWithoutUser = await this.appointmentsRepository
+      .createQueryBuilder('appointment')
+      .leftJoinAndSelect('appointment.tenant', 'tenant')
+      .where('tenant.id = :tid', { tid })
+      .andWhere('appointment.user_id IS NULL')
+      .andWhere('appointment.customer_phone IS NOT NULL')
+      .orderBy('appointment.scheduled_at', 'DESC')
+      .getMany();
+
+    const guestClients = new Map();
+    for (const apt of appointmentsWithoutUser) {
+      if (apt.customer_phone && !guestClients.has(apt.customer_phone)) {
+        guestClients.set(apt.customer_phone, {
+          id: `guest-${apt.customer_phone}`,
+          name: apt.customer_name || 'N/A',
+          phone: apt.customer_phone,
+          lastVisit: apt.scheduled_at.toISOString(),
+        });
+      }
+    }
+
+    return [...clientsWithAppointments, ...Array.from(guestClients.values())];
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a client by ID' })
-  @ApiResponse({ status: 200, description: 'Client found', type: Client })
-  @ApiResponse({ status: 404, description: 'Client not found' })
-  findOne(@Param('id') id: string): Promise<Client> {
-    return this.clientsService.findOne(id);
-  }
+  @Get('analytics')
+  @ApiOperation({ summary: 'Get client analytics for authenticated tenant' })
+  @ApiResponse({ status: 200, description: 'Client analytics' })
+  async getAnalytics(@CurrentTenant() tenantId: string) {
+    const tid = tenantId;
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update a client' })
-  @ApiResponse({ status: 200, description: 'Client updated successfully', type: Client })
-  @ApiResponse({ status: 404, description: 'Client not found' })
-  update(@Param('id') id: string, @Body() updateClientDto: UpdateClientDto): Promise<Client> {
-    return this.clientsService.update(id, updateClientDto);
-  }
+    // Total clients (users + unique guest phone numbers)
+    const totalUsers = await this.usersRepository.count({
+      where: { tenant: { id: tid } },
+    });
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete a client' })
-  @ApiResponse({ status: 200, description: 'Client deleted successfully' })
-  @ApiResponse({ status: 404, description: 'Client not found' })
-  remove(@Param('id') id: string): Promise<void> {
-    return this.clientsService.remove(id);
+    const guestAppointments = await this.appointmentsRepository
+      .createQueryBuilder('appointment')
+      .leftJoin('appointment.tenant', 'tenant')
+      .select('COUNT(DISTINCT appointment.customer_phone)', 'count')
+      .where('tenant.id = :tid', { tid })
+      .andWhere('appointment.user_id IS NULL')
+      .andWhere('appointment.customer_phone IS NOT NULL')
+      .getRawOne();
+
+    const totalClients = totalUsers + parseInt(guestAppointments?.count || '0', 10);
+
+    // Average ticket (completed appointments)
+    const completedAppointments = await this.appointmentsRepository.find({
+      where: {
+        tenant: { id: tid },
+        status: AppointmentStatus.COMPLETED,
+      },
+      relations: ['service'],
+    });
+
+    const totalRevenue = completedAppointments.reduce(
+      (sum, apt) => sum + (apt.service ? Number(apt.service.price) : 0),
+      0,
+    );
+
+    const avgTicketEUR =
+      completedAppointments.length > 0
+        ? Math.round((totalRevenue / completedAppointments.length) * 100) / 100
+        : 0;
+
+    // Satisfaction (placeholder - would need actual rating system)
+    const satisfaction = 4.5;
+
+    // Top services
+    const topServices = await this.appointmentsRepository
+      .createQueryBuilder('appointment')
+      .leftJoin('appointment.service', 'service')
+      .leftJoin('appointment.tenant', 'tenant')
+      .select('service.name', 'name')
+      .addSelect('COUNT(*)', 'count')
+      .where('tenant.id = :tid', { tid })
+      .groupBy('service.name')
+      .orderBy('count', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    return {
+      totalClients,
+      avgTicketEUR,
+      satisfaction,
+      topServices: topServices.map((s) => ({
+        name: s.name || 'Unknown',
+        count: parseInt(s.count, 10),
+      })),
+    };
   }
 }

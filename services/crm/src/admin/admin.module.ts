@@ -1,39 +1,38 @@
 import { Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { Controller, Get, Res, Req } from '@nestjs/common';
-import { Response, Request } from 'express';
+import { Controller, Get, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Client, Lead, Contact, Conversation, Message, Consent } from '../entities';
+import { Tenant, User, Conversation, Message, Service, Appointment } from '../entities';
 
 @Controller('admin')
 class AdminController {
   constructor(
-    @InjectRepository(Client) private clientRepo: Repository<Client>,
-    @InjectRepository(Lead) private leadRepo: Repository<Lead>,
-    @InjectRepository(Contact) private contactRepo: Repository<Contact>,
+    @InjectRepository(Tenant) private tenantRepo: Repository<Tenant>,
+    @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Conversation) private conversationRepo: Repository<Conversation>,
     @InjectRepository(Message) private messageRepo: Repository<Message>,
-    @InjectRepository(Consent) private consentRepo: Repository<Consent>,
+    @InjectRepository(Service) private serviceRepo: Repository<Service>,
+    @InjectRepository(Appointment) private appointmentRepo: Repository<Appointment>,
   ) {}
 
   @Get()
   async adminDashboard(@Res() res: Response) {
     const stats = {
-      clients: await this.clientRepo.count(),
-      leads: await this.leadRepo.count(),
-      contacts: await this.contactRepo.count(),
+      tenants: await this.tenantRepo.count(),
+      users: await this.userRepo.count(),
       conversations: await this.conversationRepo.count(),
       messages: await this.messageRepo.count(),
-      consents: await this.consentRepo.count(),
+      services: await this.serviceRepo.count(),
+      appointments: await this.appointmentRepo.count(),
     };
 
-    const recentLeads = await this.leadRepo.find({
+    const recentUsers = await this.userRepo.find({
       order: { created_at: 'DESC' },
       take: 10,
-      relations: ['client'],
+      relations: ['tenant'],
     });
 
     res.setHeader('Content-Type', 'text/html');
@@ -50,7 +49,7 @@ class AdminController {
           .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
           .stat-number { font-size: 2em; font-weight: bold; color: #667eea; }
           .stat-label { color: #666; }
-          .recent-leads { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .recent-users { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
           table { width: 100%; border-collapse: collapse; }
           th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
           th { background: #f8f9fa; }
@@ -69,16 +68,20 @@ class AdminController {
           
           <div class="stats">
             <div class="stat-card">
-              <div class="stat-number">${stats.clients}</div>
+              <div class="stat-number">${stats.tenants}</div>
               <div class="stat-label">Clients</div>
             </div>
             <div class="stat-card">
-              <div class="stat-number">${stats.leads}</div>
+              <div class="stat-number">${stats.users}</div>
               <div class="stat-label">Leads</div>
             </div>
             <div class="stat-card">
-              <div class="stat-number">${stats.contacts}</div>
-              <div class="stat-label">Contacts</div>
+              <div class="stat-number">${stats.services}</div>
+              <div class="stat-label">Services</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${stats.appointments}</div>
+              <div class="stat-label">Appointments</div>
             </div>
             <div class="stat-card">
               <div class="stat-number">${stats.conversations}</div>
@@ -88,13 +91,9 @@ class AdminController {
               <div class="stat-number">${stats.messages}</div>
               <div class="stat-label">Messages</div>
             </div>
-            <div class="stat-card">
-              <div class="stat-number">${stats.consents}</div>
-              <div class="stat-label">Consents</div>
-            </div>
           </div>
 
-          <div class="recent-leads">
+          <div class="recent-users">
             <h2>📋 Recent Leads</h2>
             <table>
               <thead>
@@ -102,20 +101,20 @@ class AdminController {
                   <th>Name</th>
                   <th>Email</th>
                   <th>Status</th>
-                  <th>Client</th>
+                  <th>Tenant</th>
                   <th>Created</th>
                 </tr>
               </thead>
               <tbody>
-                ${recentLeads
+                ${recentUsers
                   .map(
-                    (lead) => `
+                    (user) => `
                   <tr>
-                    <td>${lead.name}</td>
-                    <td>${lead.email || 'N/A'}</td>
-                    <td><span class="status-${lead.status}">${lead.status}</span></td>
-                    <td>${lead.client?.name || 'N/A'}</td>
-                    <td>${new Date(lead.created_at).toLocaleDateString()}</td>
+                    <td>${user.name}</td>
+                    <td>${user.email || 'N/A'}</td>
+                    <td><span class="status-${user.status}">${user.status}</span></td>
+                    <td>${user.tenant?.name || 'N/A'}</td>
+                    <td>${new Date(user.created_at).toLocaleDateString()}</td>
                   </tr>
                 `,
                   )
@@ -136,23 +135,23 @@ class AdminController {
   @Get('api/stats')
   async getStats() {
     return {
-      clients: await this.clientRepo.count(),
-      leads: await this.leadRepo.count(),
-      contacts: await this.contactRepo.count(),
+      tenants: await this.tenantRepo.count(),
+      users: await this.userRepo.count(),
+      services: await this.serviceRepo.count(),
+      appointments: await this.appointmentRepo.count(),
       conversations: await this.conversationRepo.count(),
       messages: await this.messageRepo.count(),
-      consents: await this.consentRepo.count(),
-      recent_leads: await this.leadRepo.find({
+      recent_leads: await this.userRepo.find({
         order: { created_at: 'DESC' },
         take: 5,
-        relations: ['client'],
+        relations: ['tenant'],
       }),
     };
   }
 }
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Client, Lead, Contact, Conversation, Message, Consent])],
+  imports: [TypeOrmModule.forFeature([Tenant, User, Conversation, Message, Service, Appointment])],
   controllers: [AdminController],
 })
 export class AdminJsModule {}
