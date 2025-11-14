@@ -319,6 +319,23 @@ Para leads no cualificados: "Entiendo. Normalmente trabajamos mejor con salones 
       status: 'active',
       openAiSessionId: 'connected',
     });
+
+    // Send initial greeting to start the conversation
+    // OpenAI Realtime doesn't speak automatically, we need to trigger the first response
+    setTimeout(() => {
+      const greetingEvent = {
+        type: 'response.create',
+        response: {
+          modalities: ['audio', 'text'],
+          instructions: 'Di tu saludo inicial exactamente como está en el prompt. Empieza con "Hola, buenos días. Soy Sofía de Nexora..."',
+        },
+      };
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(greetingEvent));
+        this.logger.log(`Sent initial greeting trigger for call ${callSid}`);
+      }
+    }, 500); // Small delay to ensure session is fully configured
   }
 
   /**
