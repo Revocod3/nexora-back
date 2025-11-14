@@ -60,6 +60,7 @@ interface TwilioMediaEvent {
 @WebSocketGateway({
   path: '/api/voice-calls/media-stream',
   transports: ['websocket'],
+  adapter: require('@nestjs/platform-ws').WsAdapter,
 })
 export class TwilioMediaStreamGateway
   implements OnGatewayConnection, OnGatewayDisconnect

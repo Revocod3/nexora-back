@@ -2,10 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { WsAdapter } from '@nestjs/platform-ws';
 import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Use WebSocket adapter (ws) instead of default Socket.IO
+  app.useWebSocketAdapter(new WsAdapter(app));
 
   // Security: Helmet
   // TODO: Re-enable and configure Helmet properly for production
