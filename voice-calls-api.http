@@ -1,0 +1,112 @@
+###
+# Nexora CRM - Voice Calls API Testing
+# Para usar en VS Code con la extensión REST Client
+# Base URL: https://api.realtec.solutions
+###
+
+@baseUrl = https://api.realtec.solutions
+@token = YOUR_JWT_TOKEN_HERE
+
+### 1. Login (obtener token JWT)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "tu-email@example.com",
+  "password": "tu-password"
+}
+
+### 2. Crear llamada LEGACY (usando Gather + OpenAI + ElevenLabs)
+POST {{baseUrl}}/api/voice-calls
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "toNumber": "+34612345678",
+  "contactName": "María García",
+  "businessName": "Salón Elegante",
+  "metadata": {
+    "campaign": "verano-2025",
+    "leadId": "123"
+  }
+}
+
+### 3. Crear llamada REALTIME (usando Media Streams + OpenAI Realtime API) ⭐ RECOMENDADO
+# Esta es la nueva implementación con latencia ultra-baja
+POST {{baseUrl}}/api/voice-calls/realtime
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "toNumber": "+34612345678",
+  "contactName": "María García",
+  "businessName": "Salón Elegante",
+  "metadata": {
+    "campaign": "verano-2025",
+    "leadId": "123"
+  }
+}
+
+### 4. Obtener todas las llamadas del tenant
+GET {{baseUrl}}/api/voice-calls?limit=10&offset=0
+Authorization: Bearer {{token}}
+
+### 5. Obtener llamadas filtradas por estado
+GET {{baseUrl}}/api/voice-calls?status=completed&limit=20
+Authorization: Bearer {{token}}
+
+### 6. Obtener detalles de una llamada específica
+# Reemplaza {call-id} con el ID real de una llamada
+GET {{baseUrl}}/api/voice-calls/{call-id}
+Authorization: Bearer {{token}}
+
+###
+# WEBHOOKS (Twilio los llama automáticamente, NO los llames manualmente)
+###
+
+### Webhook: Incoming call (legacy)
+# Twilio llama a este endpoint cuando la llamada es contestada
+# POST {{baseUrl}}/api/voice-calls/webhook/incoming/{callId}
+
+### Webhook: Realtime incoming
+# Twilio llama a este endpoint para setup del Media Stream
+# POST {{baseUrl}}/api/voice-calls/webhook/realtime/incoming/{callId}
+
+### Webhook: WebSocket Media Stream
+# Twilio se conecta vía WebSocket (no HTTP)
+# wss://api.realtec.solutions/api/voice-calls/media-stream
+
+###
+# NOTAS IMPORTANTES:
+#
+# 1. TOKEN JWT:
+#    - Primero ejecuta el endpoint de login (#1)
+#    - Copia el token de la respuesta
+#    - Reemplaza "YOUR_JWT_TOKEN_HERE" en la variable @token
+#
+# 2. FORMATO DE TELÉFONO:
+#    - DEBE estar en formato E.164: +[código país][número]
+#    - Ejemplos válidos:
+#      * España: +34612345678
+#      * México: +525512345678
+#      * USA: +15551234567
+#
+# 3. MODO REALTIME vs LEGACY:
+#    - REALTIME (endpoint #3): Latencia ultra-baja, usa WebSockets
+#    - LEGACY (endpoint #2): Latencia mayor, usa polling
+#    - Se recomienda usar REALTIME para mejor experiencia
+#
+# 4. TESTING EN PRODUCCIÓN:
+#    - Usa un número de teléfono real tuyo para pruebas
+#    - Verifica que Twilio tenga fondos
+#    - Revisa los logs: docker compose logs crm -f
+#
+# 5. ESTADOS DE LLAMADA:
+#    - initiated: Llamada iniciada
+#    - ringing: Teléfono sonando
+#    - in-progress: Llamada en curso
+#    - completed: Llamada finalizada exitosamente
+#    - failed: Llamada fallida
+#    - busy: Ocupado
+#    - no-answer: No contestó
+###

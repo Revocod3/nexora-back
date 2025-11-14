@@ -1,0 +1,278 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-11-14T10:15:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "req_login",
+      "parentId": "fld_auth",
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "url": "{{ _.base_url }}/api/auth/login",
+      "name": "Login",
+      "description": "Obtener token JWT para autenticación",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"tu-email@example.com\",\n  \"password\": \"tu-password\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1699964400000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_call_legacy",
+      "parentId": "fld_calls",
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "url": "{{ _.base_url }}/api/voice-calls",
+      "name": "Create Call (Legacy)",
+      "description": "Crear llamada usando método legacy (Gather + OpenAI + ElevenLabs)",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"toNumber\": \"+34612345678\",\n  \"contactName\": \"María García\",\n  \"businessName\": \"Salón Elegante\",\n  \"metadata\": {\n    \"campaign\": \"verano-2025\",\n    \"leadId\": \"123\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.jwt_token }}"
+      },
+      "metaSortKey": -1699964400000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_call_realtime",
+      "parentId": "fld_calls",
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "url": "{{ _.base_url }}/api/voice-calls/realtime",
+      "name": "Create Call (Realtime) ⭐ RECOMENDADO",
+      "description": "Crear llamada usando Realtime API (Media Streams + OpenAI Realtime) - Ultra baja latencia",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"toNumber\": \"+34612345678\",\n  \"contactName\": \"María García\",\n  \"businessName\": \"Salón Elegante\",\n  \"metadata\": {\n    \"campaign\": \"verano-2025\",\n    \"leadId\": \"123\",\n    \"source\": \"landing-page\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.jwt_token }}"
+      },
+      "metaSortKey": -1699964300000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_calls",
+      "parentId": "fld_calls",
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "url": "{{ _.base_url }}/api/voice-calls",
+      "name": "Get All Calls",
+      "description": "Obtener todas las llamadas del tenant con paginación",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "limit",
+          "value": "10",
+          "description": "Número de resultados por página"
+        },
+        {
+          "name": "offset",
+          "value": "0",
+          "description": "Offset para paginación"
+        }
+      ],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.jwt_token }}"
+      },
+      "metaSortKey": -1699964200000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_calls_filtered",
+      "parentId": "fld_calls",
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "url": "{{ _.base_url }}/api/voice-calls",
+      "name": "Get Calls Filtered by Status",
+      "description": "Obtener llamadas filtradas por estado",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "status",
+          "value": "completed",
+          "description": "Estado: initiated, ringing, in-progress, completed, failed, busy, no-answer"
+        },
+        {
+          "name": "limit",
+          "value": "20"
+        }
+      ],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.jwt_token }}"
+      },
+      "metaSortKey": -1699964100000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_call_detail",
+      "parentId": "fld_calls",
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "url": "{{ _.base_url }}/api/voice-calls/CALL_ID_AQUI",
+      "name": "Get Call Details",
+      "description": "Obtener detalles de una llamada específica. Reemplaza CALL_ID_AQUI con el ID real.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.jwt_token }}"
+      },
+      "metaSortKey": -1699964000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_auth",
+      "parentId": "wrk_main",
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "name": "Authentication",
+      "description": "",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1699964400000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_calls",
+      "parentId": "wrk_main",
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "name": "Voice Calls",
+      "description": "Endpoints para crear y gestionar llamadas",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1699964300000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "wrk_main",
+      "parentId": null,
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "name": "Nexora CRM - Voice Calls API",
+      "description": "API para testing de llamadas con Twilio",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_main",
+      "parentId": "wrk_main",
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "https://api.realtec.solutions",
+        "jwt_token": "TU_TOKEN_JWT_AQUI"
+      },
+      "dataPropertyOrder": {
+        "&0": "base_url",
+        "&1": "jwt_token"
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1699964400000,
+      "_type": "environment"
+    },
+    {
+      "_id": "env_local",
+      "parentId": "env_main",
+      "modified": 1699964400000,
+      "created": 1699964400000,
+      "name": "Local Development",
+      "data": {
+        "base_url": "http://localhost:8000",
+        "jwt_token": "TU_TOKEN_JWT_AQUI"
+      },
+      "dataPropertyOrder": {
+        "&0": "base_url",
+        "&1": "jwt_token"
+      },
+      "color": "#7d69cb",
+      "isPrivate": false,
+      "metaSortKey": 1699964400000,
+      "_type": "environment"
+    }
+  ]
+}
