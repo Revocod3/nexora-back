@@ -19,6 +19,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return true;
     }
 
+    // Allow WebSocket connections (they don't use JWT auth)
+    // WebSocket connections are authenticated through Twilio's mechanism
+    const contextType = context.getType();
+    if (contextType === 'ws') {
+      return true;
+    }
+
     return super.canActivate(context);
   }
 }
