@@ -97,6 +97,11 @@ export class TwilioMediaStreamGateway
     client.on('pong', () => {
       client.isAlive = true;
     });
+
+    // Setup message handler for native WebSocket
+    client.on('message', async (data: WebSocket.Data) => {
+      await this.handleMessageRaw(client, data);
+    });
   }
 
   /**
@@ -114,11 +119,11 @@ export class TwilioMediaStreamGateway
   }
 
   /**
-   * Handles messages from Twilio Media Stream
+   * Handles raw WebSocket messages from Twilio
    */
-  @SubscribeMessage('message')
-  async handleMessage(client: TwilioWebSocket, payload: string) {
+  private async handleMessageRaw(client: TwilioWebSocket, data: WebSocket.Data) {
     try {
+      const payload = data.toString();
       const event: TwilioMediaEvent = JSON.parse(payload);
 
       switch (event.event) {
@@ -142,6 +147,14 @@ export class TwilioMediaStreamGateway
         `Error handling Twilio message: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
+  }
+
+  /**
+   * Handles messages from Twilio Media Stream (kept for compatibility)
+   */
+  @SubscribeMessage('message')
+  async handleMessage(client: TwilioWebSocket, payload: string) {
+    await this.handleMessageRaw(client, Buffer.from(payload));
   }
 
   /**
