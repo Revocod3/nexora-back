@@ -1,0 +1,56 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Hetzner via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+
+            # Navigate to project directory
+            cd ${{ secrets.PROJECT_DIR || '/opt/nexora-back' }}
+
+            # Pull latest changes
+            echo "Pulling latest code..."
+            git fetch origin
+            git checkout main
+            git pull origin main
+
+            # Run deployment script
+            echo "Running deployment script..."
+            bash scripts/deploy.sh
+
+            # Show final status
+            echo "Deployment complete!"
+            docker compose ps
+
+      - name: Deployment Status
+        if: success()
+        run: |
+          echo "✅ Successfully deployed to Hetzner!"
+          echo "Timestamp: $(date)"
+
+      - name: Deployment Failed
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check the logs above for details"
+          exit 1
